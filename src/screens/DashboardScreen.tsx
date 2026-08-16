@@ -282,10 +282,32 @@ export const DashboardScreen = () => {
   };
 
   const handleAddCustomZone = () => {
+    if (selectedNewCountry === 'schengen') {
+      const existing = customZones.find(z => z.id === 'schengen');
+      if (existing) {
+        setActiveZoneId('schengen');
+        setIsAddZoneModalOpen(false);
+        return;
+      }
+      const newZone: SubZone = {
+        id: 'schengen',
+        name: '🇪🇺 Schengen Zone',
+        trackingMode: 'SCHENGEN',
+      };
+      const nextZones = [newZone, ...customZones];
+      setCustomZones(nextZones);
+      if (activePerson?.id) {
+        updatePersonZones(activePerson.id, nextZones as any);
+      }
+      setActiveZoneId('schengen');
+      setIsAddZoneModalOpen(false);
+      return;
+    }
+
     const code = getCountryCode(selectedNewCountry);
     if (!code) return;
 
-    const existing = customZones.find(z => isSameCountry(z.targetCountry, code));
+    const existing = customZones.find(z => z.targetCountry && isSameCountry(z.targetCountry, code));
     if (existing) {
       setActiveZoneId(existing.id);
       setIsAddZoneModalOpen(false);
@@ -510,6 +532,7 @@ export const DashboardScreen = () => {
                 onValueChange={(val) => setSelectedNewCountry(val)}
                 itemStyle={{ fontSize: 18, color: colors.text, height: 120 }}
               >
+                <Picker.Item label="🇪🇺 Schengen Zone" value="schengen" color={colors.text} />
                 {NON_SCHENGEN_COUNTRIES.map(c => (
                   <Picker.Item key={c} label={t(`countries.${c}`, { defaultValue: c })} value={c} color={colors.text} />
                 ))}

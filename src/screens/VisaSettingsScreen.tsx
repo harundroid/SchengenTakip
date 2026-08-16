@@ -135,6 +135,27 @@ export const VisaSettingsScreen = () => {
   };
 
   const handleAddZoneFromPicker = () => {
+    if (selectedNewCountryZone === 'schengen') {
+      const newZone: VisaZoneConfig = {
+        id: 'schengen',
+        name: '🇪🇺 Schengen Zone',
+        trackingMode: 'SCHENGEN',
+        maxDays: 90,
+      };
+
+      if (activePerson?.id) {
+        const existingZones = activePerson.zones || [];
+        if (!existingZones.some(z => z.id === 'schengen')) {
+          updatePersonZones(activePerson.id, [newZone, ...existingZones]);
+        }
+      }
+
+      setSelectedZoneId('schengen');
+      setTrackingMode('SCHENGEN');
+      setShowAddZoneInput(false);
+      return;
+    }
+
     const code = getCountryCode(selectedNewCountryZone);
     const zoneId = code.toLowerCase();
     
@@ -278,6 +299,7 @@ export const VisaSettingsScreen = () => {
                   onValueChange={(val) => setSelectedNewCountryZone(val)}
                   itemStyle={dynamicStyles.pickerItem}
                 >
+                  <Picker.Item label="🇪🇺 Schengen Zone" value="schengen" color={colors.text} />
                   {NON_SCHENGEN_COUNTRIES.map(c => (
                     <Picker.Item key={c} label={t(`countries.${c}`, { defaultValue: c })} value={c} color={colors.text} />
                   ))}

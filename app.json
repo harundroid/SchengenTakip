@@ -2,7 +2,7 @@
   "expo": {
     "name": "Schengen Rule Tracker",
     "slug": "SchengenApp",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "sdkVersion": "57.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -22,7 +22,7 @@
     },
     "ios": {
       "bundleIdentifier": "com.harundroid.SchengenApp",
-      "buildNumber": "2"
+      "buildNumber": "3"
     },
     "android": {
       "adaptiveIcon": {
@@ -32,7 +32,7 @@
       "predictiveBackGestureEnabled": false,
       "permissions": [],
       "package": "com.harundroid.SchengenApp",
-      "versionCode": 2
+      "versionCode": 3
     },
     "web": {
       "output": "single",
