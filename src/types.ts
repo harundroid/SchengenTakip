@@ -14,9 +14,6 @@ export interface Trip {
   segments?: TripSegment[];
   isOngoing?: boolean;
   groupId?: string; // Links trips created together for multiple persons
-  
-  // For backwards compatibility with old trips stored in device
-  country?: string; 
 }
 
 export interface VisaZoneConfig {

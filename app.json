@@ -29,10 +29,7 @@
         "foregroundImage": "./assets/images/icon-and.png"
       },
       "predictiveBackGestureEnabled": false,
-      "permissions": [
-        "android.permission.CAMERA",
-        "android.permission.RECORD_AUDIO"
-      ],
+      "permissions": [],
       "package": "com.harundroid.SchengenApp"
     },
     "web": {
@@ -48,13 +45,6 @@
           "resizeMode": "cover"
         }
       ],
-      [
-        "expo-camera",
-        {
-          "cameraPermission": "Allow SchengenApp to access your camera to scan QR codes for synchronizing trip data."
-        }
-      ],
-      "expo-sharing",
       [
         "react-native-google-mobile-ads",
         {

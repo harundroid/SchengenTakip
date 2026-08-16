@@ -1,7 +1,7 @@
 export const lightColors = {
   white: '#FFFFFF',
   black: '#000000',
-  background: '#F8F9FA',
+  background: '#F8FAFC',
   surface: '#FFFFFF',
   card: '#FFFFFF',
   
@@ -11,12 +11,12 @@ export const lightColors = {
   bauhausBlue: '#005BBB',
   
   // UI colors
-  text: '#1C1C1E',
-  textSecondary: '#6C757D',
-  border: '#E5E5EA',
-  success: '#34C759',
-  danger: '#FF3B30',
-  warning: '#FFCC00',
+  text: '#0F172A',
+  textSecondary: '#475569',
+  border: '#E2E8F0',
+  success: '#16A34A',
+  danger: '#DC2626',
+  warning: '#D97706',
   pickerBg: '#FFFFFF',
 };
 

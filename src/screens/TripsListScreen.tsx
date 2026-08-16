@@ -1,15 +1,25 @@
 import React, { useState, useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Platform } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { AdBanner } from '../components/AdBanner';
 import { useTripStore } from '../store/useTripStore';
 import { calculateDaysForTrip } from '../utils/rules';
 import { useTranslation } from 'react-i18next';
 import { useAppTheme } from '../theme/ThemeContext';
-import { SCHENGEN_ONLY_COUNTRIES } from '../constants/countries';
+import { isSchengenCountry, isSameCountry } from '../constants/countries';
+import { subDays } from 'date-fns';
+import { Trip } from '../types';
+
+const formatLocal = (date: Date) => {
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, '0');
+  const dd = String(date.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+};
 
 export const TripsListScreen = () => {
+  const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
   const { t } = useTranslation();
   const { colors, isDark } = useAppTheme();
@@ -23,30 +33,24 @@ export const TripsListScreen = () => {
   const trips = activePerson?.trips || [];
 
   const [activeFilterId, setActiveFilterId] = useState<string>('all');
+  const [isArchiveOpen, setIsArchiveOpen] = useState<boolean>(false);
 
   // Extract unique non-Schengen target countries present in trips
   const uniqueNonSchengenCountries = useMemo(() => {
     const set = new Set<string>();
     trips.forEach(t => {
-      const isOldTrip = !!t.country;
-      if (isOldTrip) {
-        if (t.country && !SCHENGEN_ONLY_COUNTRIES.includes(t.country)) {
-          set.add(t.country);
-        }
-      } else {
-        if (t.entryCountry && !SCHENGEN_ONLY_COUNTRIES.includes(t.entryCountry)) {
-          set.add(t.entryCountry);
-        }
-        if (t.exitCountry && !SCHENGEN_ONLY_COUNTRIES.includes(t.exitCountry)) {
-          set.add(t.exitCountry);
-        }
-        if (t.segments) {
-          t.segments.forEach(s => {
-            if (s.country && !SCHENGEN_ONLY_COUNTRIES.includes(s.country)) {
-              set.add(s.country);
-            }
-          });
-        }
+      if (t.entryCountry && !isSchengenCountry(t.entryCountry)) {
+        set.add(t.entryCountry);
+      }
+      if (t.exitCountry && !isSchengenCountry(t.exitCountry)) {
+        set.add(t.exitCountry);
+      }
+      if (t.segments) {
+        t.segments.forEach(s => {
+          if (s.country && !isSchengenCountry(s.country)) {
+            set.add(s.country);
+          }
+        });
       }
     });
     return Array.from(set);
@@ -55,10 +59,10 @@ export const TripsListScreen = () => {
   // Compute trip counts per zone filter
   const schengenTripCount = useMemo(() => {
     return trips.filter(t => {
-      const entryIn = SCHENGEN_ONLY_COUNTRIES.includes(t.entryCountry || t.country || '');
-      const exitIn = SCHENGEN_ONLY_COUNTRIES.includes(t.exitCountry || t.country || '');
-      const segmentIn = t.segments && t.segments.some(s => SCHENGEN_ONLY_COUNTRIES.includes(s.country));
-      return entryIn || exitIn || segmentIn;
+      if (t.segments && t.segments.length > 0) {
+        return t.segments.some(s => isSchengenCountry(s.country));
+      }
+      return isSchengenCountry(t.entryCountry) || isSchengenCountry(t.exitCountry);
     }).length;
   }, [trips]);
 
@@ -70,10 +74,10 @@ export const TripsListScreen = () => {
 
     uniqueNonSchengenCountries.forEach(c => {
       const cCount = trips.filter(t => {
-        const entryMatch = (t.entryCountry || t.country || '').trim().toLowerCase() === c.trim().toLowerCase();
-        const exitMatch = (t.exitCountry || t.country || '').trim().toLowerCase() === c.trim().toLowerCase();
-        const segMatch = t.segments && t.segments.some(s => s.country.trim().toLowerCase() === c.trim().toLowerCase());
-        return entryMatch || exitMatch || segMatch;
+        if (t.segments && t.segments.length > 0) {
+          return t.segments.some(s => isSameCountry(s.country, c));
+        }
+        return isSameCountry(t.entryCountry, c) || isSameCountry(t.exitCountry, c);
       }).length;
 
       const translatedName = t(`countries.${c}`, { defaultValue: c });
@@ -91,36 +95,166 @@ export const TripsListScreen = () => {
     if (activeFilterId === 'all') return trips;
     if (activeFilterId === 'schengen') {
       return trips.filter(t => {
-        const entryIn = SCHENGEN_ONLY_COUNTRIES.includes(t.entryCountry || t.country || '');
-        const exitIn = SCHENGEN_ONLY_COUNTRIES.includes(t.exitCountry || t.country || '');
-        const segmentIn = t.segments && t.segments.some(s => SCHENGEN_ONLY_COUNTRIES.includes(s.country));
-        return entryIn || exitIn || segmentIn;
+        if (t.segments && t.segments.length > 0) {
+          return t.segments.some(s => isSchengenCountry(s.country));
+        }
+        return isSchengenCountry(t.entryCountry) || isSchengenCountry(t.exitCountry);
       });
     }
     if (activeFilterId.startsWith('country_')) {
-      const targetC = activeFilterId.replace('country_', '').trim().toLowerCase();
+      const targetC = activeFilterId.replace('country_', '');
       return trips.filter(t => {
-        const entryMatch = (t.entryCountry || t.country || '').trim().toLowerCase() === targetC;
-        const exitMatch = (t.exitCountry || t.country || '').trim().toLowerCase() === targetC;
-        const segMatch = t.segments && t.segments.some(s => s.country.trim().toLowerCase() === targetC);
-        return entryMatch || exitMatch || segMatch;
+        if (t.segments && t.segments.length > 0) {
+          return t.segments.some(s => isSameCountry(s.country, targetC));
+        }
+        return isSameCountry(t.entryCountry, targetC) || isSameCountry(t.exitCountry, targetC);
       });
     }
     return trips;
   }, [trips, activeFilterId]);
 
+  // Threshold for active 180-day window (today - 179 days)
+  const minActiveDateISO = useMemo(() => {
+    return formatLocal(subDays(new Date(), 179));
+  }, []);
+
+  // Sort chronologically (ongoing first, then newest to oldest) and split into Active vs Archived
+  const { activeTrips, archivedTrips } = useMemo(() => {
+    const sorted = [...filteredTrips].sort((a, b) => {
+      if (a.isOngoing && !b.isOngoing) return -1;
+      if (!a.isOngoing && b.isOngoing) return 1;
+      return b.entryDate.localeCompare(a.entryDate);
+    });
+
+    const active: Trip[] = [];
+    const archived: Trip[] = [];
+
+    sorted.forEach(t => {
+      if (t.isOngoing || t.exitDate >= minActiveDateISO) {
+        active.push(t);
+      } else {
+        archived.push(t);
+      }
+    });
+
+    return { activeTrips: active, archivedTrips: archived };
+  }, [filteredTrips, minActiveDateISO]);
+
   const dynamicStyles = getStyles(colors, isDark);
 
+  const renderTripItem = (trip: Trip, isArchived: boolean = false) => {
+    const days = calculateDaysForTrip(trip.entryDate, trip.exitDate, trip.isOngoing);
+    const isMulti = !trip.isOngoing && trip.entryCountry !== trip.exitCountry;
+    const hasSegments = trip.segments && trip.segments.length > 0;
+    const entryName = t(`countries.${trip.entryCountry}`, { defaultValue: trip.entryCountry });
+    const exitName = t(`countries.${trip.exitCountry}`, { defaultValue: trip.exitCountry });
+    const singleName = t(`countries.${trip.entryCountry}`, { defaultValue: trip.entryCountry });
+
+    const mainLabel = isMulti ? `${entryName} ➔ ${exitName}` : singleName;
+
+    const handleCloseTrip = () => {
+      const exitDate = formatLocal(new Date());
+
+      const hasGroup = trip.groupId && persons.some(p =>
+        p.id !== activePersonId && p.trips.some(t => t.groupId === trip.groupId && t.isOngoing)
+      );
+
+      if (hasGroup) {
+        if (Platform.OS === 'web') {
+          const closeAll = window.confirm('Other profiles also have this ongoing trip. Close for EVERYONE? (Cancel = Just me)');
+          if (closeAll) {
+            closeTripGroup(trip.groupId!, exitDate);
+          } else {
+            updateTrip(trip.id, { isOngoing: false, exitDate });
+          }
+        } else {
+          Alert.alert(
+            'Close Trip',
+            'Other profiles also have this ongoing trip. Close it for everyone?',
+            [
+              { text: 'Cancel', style: 'cancel' },
+              { text: 'Just Me', onPress: () => updateTrip(trip.id, { isOngoing: false, exitDate }) },
+              { text: 'Everyone', onPress: () => closeTripGroup(trip.groupId!, exitDate), style: 'destructive' }
+            ]
+          );
+        }
+      } else {
+        updateTrip(trip.id, { isOngoing: false, exitDate });
+      }
+    };
+
+    return (
+      <View
+        key={trip.id}
+        style={[
+          dynamicStyles.tripItem,
+          trip.isOngoing && { borderColor: colors.bauhausBlue, borderWidth: 2 },
+          isArchived && dynamicStyles.tripItemArchived,
+        ]}
+      >
+        <View style={dynamicStyles.tripHeaderRow}>
+          <View style={{ flex: 1 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' }}>
+              <Text style={dynamicStyles.tripCountry}>{mainLabel}</Text>
+              {trip.isOngoing && (
+                <Text style={{ color: colors.bauhausBlue, fontSize: 12, fontWeight: '800', marginLeft: 6 }}>
+                  (Ongoing)
+                </Text>
+              )}
+              {isArchived && (
+                <View style={dynamicStyles.archivedPill}>
+                  <Text style={dynamicStyles.archivedPillText}>{t('tripsList.archivedBadge')}</Text>
+                </View>
+              )}
+            </View>
+            <Text style={dynamicStyles.tripDates}>
+              {trip.entryDate} to {trip.isOngoing ? 'Ongoing' : trip.exitDate}
+            </Text>
+          </View>
+          <View style={dynamicStyles.tripRight}>
+            <Text style={[dynamicStyles.tripDays, isArchived && { color: colors.textSecondary }]}>{days}d</Text>
+            {trip.isOngoing && (
+              <TouchableOpacity onPress={handleCloseTrip} style={dynamicStyles.closeBtn}>
+                <Text style={dynamicStyles.closeBtnText}>Close</Text>
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity onPress={() => navigation.navigate('AddTrip', { tripId: trip.id })} style={dynamicStyles.editBtn}>
+              <Text style={dynamicStyles.editBtnText}>✎</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => removeTrip(trip.id)} style={dynamicStyles.deleteBtn}>
+              <Text style={dynamicStyles.deleteBtnText}>×</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {isMulti && hasSegments && (
+          <View style={dynamicStyles.segmentsContainer}>
+            <Text style={dynamicStyles.segmentsTitle}>Breakdown:</Text>
+            {trip.segments!.map((seg, idx) => (
+              <Text key={idx} style={dynamicStyles.segmentText}>
+                • {t(`countries.${seg.country}`, { defaultValue: seg.country })}: {seg.days} days
+              </Text>
+            ))}
+          </View>
+        )}
+      </View>
+    );
+  };
+
   return (
-    <SafeAreaView style={dynamicStyles.container} edges={['top', 'left', 'right', 'bottom']}>
+    <SafeAreaView style={dynamicStyles.container} edges={['left', 'right', 'bottom']}>
       {/* HEADER */}
-      <View style={dynamicStyles.header}>
-        <TouchableOpacity 
-          style={dynamicStyles.backBtn} 
+      <View style={[
+        dynamicStyles.header,
+        { paddingTop: Platform.OS === 'ios' ? Math.max(insets.top, 20) + 8 : 16 }
+      ]}>
+        <TouchableOpacity
+          style={dynamicStyles.backBtn}
           onPress={() => navigation.goBack()}
-          hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
+          hitSlop={{ top: 25, bottom: 25, left: 25, right: 25 }}
+          activeOpacity={0.7}
         >
-          <Text style={dynamicStyles.backBtnText}>{t('common.back')}</Text>
+          <Text style={dynamicStyles.backBtnText}>‹ {t('common.back') || 'Geri'}</Text>
         </TouchableOpacity>
         <Text style={dynamicStyles.title}>{t('tripsList.title')}</Text>
         <View style={dynamicStyles.placeholder} />
@@ -145,8 +279,8 @@ export const TripsListScreen = () => {
 
       {/* TRIPS LIST */}
       <ScrollView contentContainerStyle={dynamicStyles.scroll}>
-        <TouchableOpacity 
-          style={dynamicStyles.addBtn} 
+        <TouchableOpacity
+          style={dynamicStyles.addBtn}
           onPress={() => navigation.navigate('AddTrip')}
         >
           <Text style={dynamicStyles.addBtnText}>{t('tripsList.addManually')}</Text>
@@ -155,90 +289,35 @@ export const TripsListScreen = () => {
         {filteredTrips.length === 0 ? (
           <Text style={dynamicStyles.emptyText}>{t('tripsList.empty')}</Text>
         ) : (
-          filteredTrips.map(trip => {
-            const days = calculateDaysForTrip(trip.entryDate, trip.exitDate, trip.isOngoing);
-            const isMulti = !trip.isOngoing && trip.entryCountry !== trip.exitCountry;
-            const hasSegments = trip.segments && trip.segments.length > 0;
-            const entryName = t(`countries.${trip.entryCountry}`, { defaultValue: trip.entryCountry });
-            const exitName = t(`countries.${trip.exitCountry}`, { defaultValue: trip.exitCountry });
-            const singleName = t(`countries.${trip.country || trip.entryCountry}`, { defaultValue: trip.country || trip.entryCountry });
+          <>
+            {/* ACTIVE TRIPS SECTION */}
+            {activeTrips.map(trip => renderTripItem(trip, false))}
 
-            const mainLabel = isMulti ? `${entryName} ➔ ${exitName}` : singleName;
-
-            const formatLocal = (date: Date) => {
-              const yyyy = date.getFullYear();
-              const mm = String(date.getMonth() + 1).padStart(2, '0');
-              const dd = String(date.getDate()).padStart(2, '0');
-              return `${yyyy}-${mm}-${dd}`;
-            };
-
-            const handleCloseTrip = () => {
-              const exitDate = formatLocal(new Date());
-
-              const hasGroup = trip.groupId && persons.some(p => 
-                p.id !== activePersonId && p.trips.some(t => t.groupId === trip.groupId && t.isOngoing)
-              );
-
-              if (hasGroup) {
-                if (Platform.OS === 'web') {
-                  const closeAll = window.confirm('Other profiles also have this ongoing trip. Close for EVERYONE? (Cancel = Just me)');
-                  if (closeAll) {
-                    closeTripGroup(trip.groupId!, exitDate);
-                  } else {
-                    updateTrip(trip.id, { isOngoing: false, exitDate });
-                  }
-                } else {
-                  Alert.alert(
-                    'Close Trip',
-                    'Other profiles also have this ongoing trip. Close it for everyone?',
-                    [
-                      { text: 'Cancel', style: 'cancel' },
-                      { text: 'Just Me', onPress: () => updateTrip(trip.id, { isOngoing: false, exitDate }) },
-                      { text: 'Everyone', onPress: () => closeTripGroup(trip.groupId!, exitDate), style: 'destructive' }
-                    ]
-                  );
-                }
-              } else {
-                updateTrip(trip.id, { isOngoing: false, exitDate });
-              }
-            };
-
-            return (
-              <View key={trip.id} style={[dynamicStyles.tripItem, trip.isOngoing && { borderColor: colors.bauhausBlue, borderWidth: 2 }]}>
-                <View style={dynamicStyles.tripHeaderRow}>
-                  <View style={{flex: 1}}>
-                    <Text style={dynamicStyles.tripCountry}>{mainLabel} {trip.isOngoing && <Text style={{color: colors.bauhausBlue, fontSize: 12}}> (Ongoing)</Text>}</Text>
-                    <Text style={dynamicStyles.tripDates}>{trip.entryDate} to {trip.isOngoing ? 'Ongoing' : trip.exitDate}</Text>
+            {/* ARCHIVED TRIPS SECTION (>180 DAYS AGO) */}
+            {archivedTrips.length > 0 && (
+              <View style={dynamicStyles.archiveSection}>
+                <TouchableOpacity
+                  style={dynamicStyles.archiveHeaderRow}
+                  activeOpacity={0.7}
+                  onPress={() => setIsArchiveOpen(prev => !prev)}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                    <Text style={dynamicStyles.archiveHeaderTitle}>📦 {t('tripsList.archiveSectionTitle')}</Text>
+                    <View style={dynamicStyles.archiveCountBadge}>
+                      <Text style={dynamicStyles.archiveCountText}>{archivedTrips.length}</Text>
+                    </View>
                   </View>
-                  <View style={dynamicStyles.tripRight}>
-                    <Text style={dynamicStyles.tripDays}>{days}d</Text>
-                    {trip.isOngoing && (
-                      <TouchableOpacity onPress={handleCloseTrip} style={dynamicStyles.closeBtn}>
-                        <Text style={dynamicStyles.closeBtnText}>Close</Text>
-                      </TouchableOpacity>
-                    )}
-                    <TouchableOpacity onPress={() => (navigation as any).navigate('AddTrip', { tripId: trip.id })} style={dynamicStyles.editBtn}>
-                      <Text style={dynamicStyles.editBtnText}>✎</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={() => removeTrip(trip.id)} style={dynamicStyles.deleteBtn}>
-                      <Text style={dynamicStyles.deleteBtnText}>×</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
+                  <Text style={dynamicStyles.archiveChevron}>{isArchiveOpen ? '▲' : '▼'}</Text>
+                </TouchableOpacity>
 
-                {isMulti && hasSegments && (
-                  <View style={dynamicStyles.segmentsContainer}>
-                    <Text style={dynamicStyles.segmentsTitle}>Breakdown:</Text>
-                    {trip.segments!.map((seg, idx) => (
-                      <Text key={idx} style={dynamicStyles.segmentText}>
-                        • {t(`countries.${seg.country}`, { defaultValue: seg.country })}: {seg.days} days
-                      </Text>
-                    ))}
+                {isArchiveOpen && (
+                  <View style={{ marginTop: 8 }}>
+                    {archivedTrips.map(trip => renderTripItem(trip, true))}
                   </View>
                 )}
               </View>
-            );
-          })
+            )}
+          </>
         )}
       </ScrollView>
 
@@ -257,18 +336,22 @@ const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingTop: Platform.OS === 'ios' ? 24 : 16,
-    paddingBottom: 16,
+    paddingBottom: 14,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
+    backgroundColor: colors.surface,
   },
   backBtn: {
     paddingVertical: 8,
-    paddingHorizontal: 12,
+    paddingHorizontal: 14,
     backgroundColor: colors.surface,
-    borderRadius: 8,
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: colors.border,
+    minHeight: 40,
+    minWidth: 60,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   backBtnText: {
     fontSize: 15,
@@ -276,7 +359,7 @@ const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
     fontWeight: '800',
   },
   title: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '800',
     color: colors.text,
   },
@@ -433,5 +516,62 @@ const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
     fontSize: 14,
     color: colors.text,
     marginBottom: 2,
+  },
+
+  // Archive Section Styles
+  archiveSection: {
+    marginTop: 20,
+    paddingTop: 16,
+    borderTopWidth: 1.5,
+    borderTopColor: colors.border,
+  },
+  archiveHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 14,
+  },
+  archiveHeaderTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: colors.textSecondary,
+    letterSpacing: 0.5,
+  },
+  archiveCountBadge: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+  },
+  archiveCountText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.textSecondary,
+  },
+  tripItemArchived: {
+    opacity: 0.82,
+    borderStyle: 'dashed',
+  },
+  archivedPill: {
+    backgroundColor: colors.background,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    marginLeft: 6,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  archivedPillText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: colors.textSecondary,
+  },
+  archiveChevron: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    marginLeft: 8,
+    fontWeight: '800',
   },
 });

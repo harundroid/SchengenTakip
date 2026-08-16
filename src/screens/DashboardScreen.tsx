@@ -8,7 +8,7 @@ import { Calendar, LocaleConfig } from 'react-native-calendars';
 import { parseISO, isBefore, isSameDay, addDays, differenceInDays } from 'date-fns';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { useTripStore } from '../store/useTripStore';
-import { calculate90180Rule, calculateMainDestination, calculateDaysForTrip } from '../utils/rules';
+import { calculate90180Rule, calculateMainDestination, calculateDaysForTrip, calculateFutureTripQuota } from '../utils/rules';
 import { scheduleVisaExpiringNotification } from '../utils/notifications';
 import { useTranslation } from 'react-i18next';
 import { changeAppLanguage } from '../i18n';
@@ -125,10 +125,6 @@ export const DashboardScreen = () => {
   const trips = activePerson?.trips || [];
   const visaDetails = activePerson?.visaDetails;
 
-  // Active ongoing trip
-  const ongoingTrip = useMemo(() => {
-    return trips.find(t => t.isOngoing);
-  }, [trips]);
 
   const [selectedStartDate, setSelectedStartDate] = useState<string | null>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -151,6 +147,7 @@ export const DashboardScreen = () => {
   const [activeZoneId, setActiveZoneId] = useState<string>('schengen');
   const [isAddZoneModalOpen, setIsAddZoneModalOpen] = useState(false);
   const [selectedNewCountry, setSelectedNewCountry] = useState(NON_SCHENGEN_COUNTRIES[0]);
+  const [calendarDate, setCalendarDate] = useState<string>(() => formatLocalISO(new Date()));
 
   // Sync customZones with activePerson.zones or language default
   useEffect(() => {
@@ -163,13 +160,13 @@ export const DashboardScreen = () => {
       const isTr = i18n.language === 'tr';
       const defaultInitialZones: SubZone[] = isTr
         ? [
-            { id: 'schengen', name: '🇪🇺 Schengen Zone', trackingMode: 'SCHENGEN' },
-            { id: 'TR', name: '🇹🇷 Türkiye', trackingMode: 'SINGLE_COUNTRY', targetCountry: 'TR' }
-          ]
+          { id: 'schengen', name: '🇪🇺 Schengen Zone', trackingMode: 'SCHENGEN' },
+          { id: 'TR', name: '🇹🇷 Türkiye', trackingMode: 'SINGLE_COUNTRY', targetCountry: 'TR' }
+        ]
         : [
-            { id: 'TR', name: '🇹🇷 Türkiye', trackingMode: 'SINGLE_COUNTRY', targetCountry: 'TR' },
-            { id: 'schengen', name: '🇪🇺 Schengen Zone', trackingMode: 'SCHENGEN' }
-          ];
+          { id: 'TR', name: '🇹🇷 Türkiye', trackingMode: 'SINGLE_COUNTRY', targetCountry: 'TR' },
+          { id: 'schengen', name: '🇪🇺 Schengen Zone', trackingMode: 'SCHENGEN' }
+        ];
       setCustomZones(defaultInitialZones);
       setActiveZoneId(defaultInitialZones[0].id);
     }
@@ -202,8 +199,8 @@ export const DashboardScreen = () => {
         if (trip.segments && trip.segments.length > 0) {
           return trip.segments.some(s => isSameCountry(s.country, currentZone.targetCountry));
         }
-        return isSameCountry(trip.entryCountry || trip.country, currentZone.targetCountry) ||
-          isSameCountry(trip.exitCountry || trip.country, currentZone.targetCountry);
+        return isSameCountry(trip.entryCountry, currentZone.targetCountry) ||
+          isSameCountry(trip.exitCountry, currentZone.targetCountry);
       });
     } else {
       // SCHENGEN Mode: Filter ONLY trips matching Schengen countries
@@ -211,14 +208,23 @@ export const DashboardScreen = () => {
         if (trip.segments && trip.segments.length > 0) {
           return trip.segments.some(s => isSchengenCountry(s.country));
         }
-        return isSchengenCountry(trip.entryCountry || trip.country) ||
-          isSchengenCountry(trip.exitCountry || trip.country);
+        return isSchengenCountry(trip.entryCountry) ||
+          isSchengenCountry(trip.exitCountry);
       });
     }
   }, [trips, currentZone]);
 
+  // Active ongoing trip specifically for the current active zone
+  const ongoingTrip = useMemo(() => {
+    return zoneFilteredTrips.find(t => t.isOngoing);
+  }, [zoneFilteredTrips]);
+
   const rule90180 = calculate90180Rule(zoneFilteredTrips, activeVisaConfig);
-  const mainDestination = calculateMainDestination(zoneFilteredTrips, visaDetails?.country || '');
+  const mainDestination = calculateMainDestination(
+    zoneFilteredTrips,
+    visaDetails?.country || '',
+    activeVisaConfig?.isVisaExempt ? undefined : activeVisaConfig?.validFrom
+  );
 
   // Trigger local push notification when visa is expiring soon (within 20 days)
   useEffect(() => {
@@ -232,6 +238,41 @@ export const DashboardScreen = () => {
       );
     }
   }, [rule90180.isVisaExpiringSoon, rule90180.daysUntilVisaExpires, rule90180.daysRemaining, t]);
+
+  // Future planned trips (starting strictly after today) for current active zone
+  const futureTrips = useMemo(() => {
+    const todayISO = formatLocalISO(new Date());
+    return zoneFilteredTrips
+      .filter(t => !t.isOngoing && t.entryDate > todayISO)
+      .sort((a, b) => a.entryDate.localeCompare(b.entryDate));
+  }, [zoneFilteredTrips]);
+
+  // Trigger notification for future trips with overstay risk when within 14 days of departure
+  useEffect(() => {
+    const today = new Date();
+    futureTrips.forEach(trip => {
+      const entry = parseISO(trip.entryDate);
+      const daysUntil = differenceInDays(entry, today);
+      if (daysUntil >= 0 && daysUntil <= 14) {
+        const quota = calculateFutureTripQuota(
+          trip,
+          zoneFilteredTrips,
+          activeVisaConfig.maxDays,
+          activeVisaConfig.validUntil,
+          activeVisaConfig.validFrom
+        );
+        if (quota.status === 'OVERSTAY') {
+          scheduleVisaExpiringNotification(
+            t('dashboard.notificationFutureOverstayTitle'),
+            t('dashboard.notificationFutureOverstayBody', {
+              country: t(`countries.${trip.entryCountry}`, { defaultValue: trip.entryCountry }),
+              overstay: quota.overstayDays,
+            })
+          );
+        }
+      }
+    });
+  }, [futureTrips, zoneFilteredTrips, activeVisaConfig, t]);
 
   const handleCreateInitialProfile = () => {
     const name = initialProfileName.trim() || 'My Profile';
@@ -352,10 +393,14 @@ export const DashboardScreen = () => {
 
         const dateList = getDatesRangeArray(trip.entryDate, endDateStr);
 
-        const entryC = (trip.entryCountry || trip.country || '').trim();
-        const exitC = (trip.exitCountry || trip.country || '').trim();
+        const entryC = (trip.entryCountry || '').trim();
+        const exitC = (trip.exitCountry || '').trim();
 
         const isOngoing = trip.isOngoing;
+        const isMulti = !trip.isOngoing && (
+          (trip.segments && trip.segments.length > 1) || 
+          (Boolean(entryC) && Boolean(exitC) && entryC !== exitC)
+        );
 
         dateList.forEach((dateStr, idx) => {
           const isStart = idx === 0;
@@ -379,17 +424,25 @@ export const DashboardScreen = () => {
             isOverstay = daysInWindow > (activeVisaConfig.maxDays || 90);
           } catch { }
 
-          const dayColor = isOverstay
-            ? colors.danger
-            : isOngoing
-              ? colors.bauhausBlue
-              : colors.success;
+          let dayColor = colors.success;
+          let textColor = '#FFFFFF';
+
+          if (isOverstay) {
+            dayColor = colors.danger;
+            textColor = '#FFFFFF';
+          } else if (isOngoing) {
+            dayColor = colors.bauhausBlue;
+            textColor = '#FFFFFF';
+          } else if (isMulti) {
+            dayColor = colors.bauhausYellow;
+            textColor = '#1E293B';
+          }
 
           result[dateStr] = {
             startingDay: isStart,
             endingDay: isEnd,
             color: dayColor,
-            textColor: '#FFFFFF',
+            textColor: textColor,
           };
         });
       } catch (e) {
@@ -399,12 +452,6 @@ export const DashboardScreen = () => {
 
     return result;
   }, [zoneFilteredTrips, selectedStartDate, currentZone, activeVisaConfig, visaDetails, colors, isDark]);
-
-  const latestTripDate = useMemo(() => {
-    if (trips.length === 0) return undefined;
-    const sorted = [...trips].sort((a, b) => new Date(a.entryDate).getTime() - new Date(b.entryDate).getTime());
-    return sorted[sorted.length - 1].entryDate;
-  }, [trips]);
 
   const handleAddPerson = () => {
     if (newPersonName.trim()) {
@@ -573,7 +620,9 @@ export const DashboardScreen = () => {
 
           {rule90180.nextAvailableDate && (
             <View style={dynamicStyles.nextAvailableContainer}>
-              <Text style={dynamicStyles.nextAvailableTitle}>🚀 {t('dashboard.nextAvailableTitle')}</Text>
+              <Text style={dynamicStyles.nextAvailableTitle}>
+                🚀 {rule90180.daysRemaining === 0 ? t('dashboard.nextAvailableTitle') : t('dashboard.nextFreedTitle', { defaultValue: 'İlk Hak Genişleme Tarihi' })}
+              </Text>
               <Text style={dynamicStyles.nextAvailableDateVal}>{rule90180.nextAvailableDate}</Text>
               <Text style={dynamicStyles.nextAvailableSubVal}>
                 ({rule90180.freedDays} {t('dashboard.nextAvailableSub')})
@@ -595,7 +644,7 @@ export const DashboardScreen = () => {
             </View>
 
             <Text style={dynamicStyles.ongoingCountryText}>
-              📍 {t(`countries.${ongoingTrip.entryCountry || ongoingTrip.country}`, { defaultValue: ongoingTrip.entryCountry || ongoingTrip.country })}
+              📍 {t(`countries.${ongoingTrip.entryCountry}`, { defaultValue: ongoingTrip.entryCountry })}
             </Text>
 
             <Text style={dynamicStyles.ongoingDatesText}>
@@ -677,19 +726,39 @@ export const DashboardScreen = () => {
           <View style={dynamicStyles.legendItem}><View style={[dynamicStyles.legendDot, { backgroundColor: colors.bauhausYellow }]} /><Text style={dynamicStyles.legendText}>{t('dashboard.legendMulti')}</Text></View>
         </View>
 
-        <Text style={dynamicStyles.calendarHint}>
-          {!selectedStartDate
-            ? t('dashboard.hintSelectEntry')
-            : t('dashboard.hintSelectExit')}
-        </Text>
+        {/* Calendar Header with Hint and Today Button */}
+        <View style={dynamicStyles.calendarHeaderRow}>
+          <Text style={dynamicStyles.calendarHint}>
+            {!selectedStartDate
+              ? t('dashboard.hintSelectEntry')
+              : t('dashboard.hintSelectExit')}
+          </Text>
+          <TouchableOpacity
+            style={dynamicStyles.todayBtn}
+            onPress={() => setCalendarDate(formatLocalISO(new Date()))}
+            activeOpacity={0.7}
+          >
+            <Text style={dynamicStyles.todayBtnText}>📅 {t('common.today', { defaultValue: 'Bugün' })}</Text>
+          </TouchableOpacity>
+        </View>
 
         <View style={dynamicStyles.calendarContainer}>
           <Calendar
-            key={`${latestTripDate || 'default'}-${currentLang}`}
-            current={latestTripDate}
+            key={`cal-${isDark ? 'dark' : 'light'}-${calendarDate.substring(0, 7)}-${currentLang}`}
+            current={calendarDate}
             markingType={'period'}
             markedDates={markedDates}
             onDayPress={onDayPress}
+            onMonthChange={(month) => {
+              setCalendarDate(month.dateString);
+            }}
+            renderArrow={(direction: 'left' | 'right') => (
+              <View style={dynamicStyles.calendarArrowBtn}>
+                <Text style={dynamicStyles.calendarArrowText}>
+                  {direction === 'left' ? '‹' : '›'}
+                </Text>
+              </View>
+            )}
             theme={{
               calendarBackground: colors.surface,
               backgroundColor: colors.surface,
@@ -700,11 +769,104 @@ export const DashboardScreen = () => {
               indicatorColor: colors.bauhausBlue,
               textDayFontWeight: '600',
               textMonthFontWeight: '800',
-              textDayHeaderFontWeight: '600',
+              textDayHeaderFontWeight: '700',
               textSectionTitleColor: colors.textSecondary,
             }}
           />
         </View>
+
+        {/* FUTURE TRIPS PLANNER SECTION */}
+        {futureTrips.length > 0 && (
+          <View style={dynamicStyles.futureTripsSection}>
+            <View style={dynamicStyles.futureTripsSectionHeader}>
+              <Text style={dynamicStyles.futureTripsSectionTitle}>✈️ {t('dashboard.futureTripsTitle')}</Text>
+              <View style={dynamicStyles.futureTripsCountBadge}>
+                <Text style={dynamicStyles.futureTripsCountBadgeText}>{futureTrips.length}</Text>
+              </View>
+            </View>
+
+            {futureTrips.map(trip => {
+              const quota = calculateFutureTripQuota(
+                trip,
+                zoneFilteredTrips,
+                activeVisaConfig.maxDays,
+                activeVisaConfig.validUntil,
+                activeVisaConfig.validFrom
+              );
+
+              const isSame = trip.entryCountry === trip.exitCountry;
+              const routeLabel = isSame
+                ? t(`countries.${trip.entryCountry}`, { defaultValue: trip.entryCountry })
+                : `${t(`countries.${trip.entryCountry}`, { defaultValue: trip.entryCountry })} ➔ ${t(`countries.${trip.exitCountry}`, { defaultValue: trip.exitCountry })}`;
+
+              const cardStyle = [
+                dynamicStyles.futureTripCard,
+                quota.status === 'SAFE' && dynamicStyles.futureTripCardSafe,
+                quota.status === 'TIGHT' && dynamicStyles.futureTripCardTight,
+                quota.status === 'OVERSTAY' && dynamicStyles.futureTripCardOverstay,
+              ];
+
+              const quotaTextColor =
+                quota.status === 'OVERSTAY'
+                  ? colors.danger
+                  : quota.status === 'TIGHT'
+                    ? colors.warning
+                    : colors.success;
+
+              return (
+                <TouchableOpacity
+                  key={trip.id}
+                  style={cardStyle}
+                  activeOpacity={0.7}
+                  onPress={() => navigation.navigate('AddTrip', {
+                    tripId: trip.id,
+                    trackingMode: currentZone.trackingMode,
+                    targetCountry: currentZone.targetCountry,
+                  })}
+                >
+                  <View style={dynamicStyles.futureTripTopRow}>
+                    <Text style={dynamicStyles.futureTripDestination}>📍 {routeLabel}</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <View style={dynamicStyles.futureTripDaysBadge}>
+                        <Text style={dynamicStyles.futureTripDaysBadgeText}>
+                          {t('dashboard.futurePlanNeeded', { days: quota.daysNeeded })}
+                        </Text>
+                      </View>
+                      <Text style={{ marginLeft: 6, fontSize: 13, color: colors.bauhausBlue }}>✎</Text>
+                    </View>
+                  </View>
+
+                  <Text style={dynamicStyles.futureTripDates}>
+                    📅 {trip.entryDate} ➔ {trip.exitDate}
+                  </Text>
+
+                  <View style={dynamicStyles.futureTripQuotaRow}>
+                    {quota.status === 'SAFE' && (
+                      <Text style={[dynamicStyles.futureTripQuotaText, { color: quotaTextColor }]}>
+                        ✅ {t('dashboard.futurePlanSafe', { remaining: quota.remainingAtExit })}
+                      </Text>
+                    )}
+                    {quota.status === 'TIGHT' && (
+                      <Text style={[dynamicStyles.futureTripQuotaText, { color: quotaTextColor }]}>
+                        ⚠️ {t('dashboard.futurePlanTight', { remaining: quota.remainingAtExit })}
+                      </Text>
+                    )}
+                    {quota.status === 'OVERSTAY' && (
+                      <Text style={[dynamicStyles.futureTripQuotaText, { color: quotaTextColor }]}>
+                        {t('dashboard.futurePlanOverstay', { overstay: quota.overstayDays })}
+                      </Text>
+                    )}
+                    {quota.status === 'VISA_EXPIRED' && (
+                      <Text style={[dynamicStyles.futureTripQuotaText, { color: colors.danger }]}>
+                        {t('dashboard.futurePlanExpired')}
+                      </Text>
+                    )}
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        )}
 
         <TouchableOpacity
           style={dynamicStyles.actionBtn}
@@ -896,7 +1058,7 @@ export const DashboardScreen = () => {
               <TouchableOpacity
                 style={dynamicStyles.githubBtn}
                 onPress={() => {
-                  Linking.openURL('https://github.com/harundroid/SchengenTakip').catch(() => {});
+                  Linking.openURL('https://github.com/harundroid/SchengenTakip').catch(() => { });
                 }}
               >
                 <Text style={dynamicStyles.githubBtnText}>
@@ -1014,10 +1176,143 @@ const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
   legendDot: { width: 10, height: 10, borderRadius: 5, marginRight: 6 },
   legendText: { fontSize: 12, color: colors.textSecondary, fontWeight: '600' },
 
-  calendarHint: { fontSize: 12, color: colors.textSecondary, fontStyle: 'italic', textAlign: 'center', marginVertical: 6 },
-  calendarContainer: { backgroundColor: colors.surface, borderRadius: 16, padding: 8, marginBottom: 16, borderWidth: 1, borderColor: colors.border },
+  calendarHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+    paddingHorizontal: 4,
+  },
+  calendarHint: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    fontStyle: 'italic',
+    flex: 1
+  },
+  todayBtn: {
+    backgroundColor: colors.surface,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginLeft: 8,
+  },
+  todayBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.bauhausBlue,
+  },
+  calendarContainer: {
+    backgroundColor: colors.surface,
+    borderRadius: 16,
+    padding: 8,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: colors.border
+  },
+  calendarArrowBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.border,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  calendarArrowText: {
+    color: colors.bauhausBlue,
+    fontSize: 20,
+    fontWeight: '900',
+    marginTop: Platform.OS === 'ios' ? -2 : 0,
+  },
   actionBtn: { backgroundColor: colors.bauhausYellow, padding: 16, borderRadius: 12, alignItems: 'center' },
   actionBtnText: { color: colors.text, fontWeight: '800', fontSize: 16 },
+
+  // Future Trips Planner
+  futureTripsSection: {
+    marginBottom: 16,
+  },
+  futureTripsSectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  futureTripsSectionTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: colors.text,
+  },
+  futureTripsCountBadge: {
+    backgroundColor: colors.bauhausBlue,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+  },
+  futureTripsCountBadgeText: {
+    color: colors.white,
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  futureTripCard: {
+    backgroundColor: colors.surface,
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 10,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+  },
+  futureTripCardSafe: {
+    borderColor: colors.success + '60',
+  },
+  futureTripCardTight: {
+    borderColor: colors.warning,
+  },
+  futureTripCardOverstay: {
+    borderColor: colors.danger,
+    backgroundColor: isDark ? '#2a1215' : '#fff5f5',
+  },
+  futureTripTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  futureTripDestination: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: colors.text,
+  },
+  futureTripDaysBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    backgroundColor: colors.background,
+  },
+  futureTripDaysBadgeText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.textSecondary,
+  },
+  futureTripDates: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  futureTripQuotaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  futureTripQuotaText: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
 
   // Initial & Add Zone Modals
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: 20 },

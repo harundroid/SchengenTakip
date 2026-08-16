@@ -55,13 +55,22 @@
     "addPerson": "+ Добави Профил",
     "profilesTitle": "Профили",
     "nextAvailableTitle": "Следваща Дата за Пътуване",
+    "nextFreedTitle": "Първо освобождаване на дни",
     "nextAvailableSub": "дни се освобождават",
     "visaExpiredAlertTitle": "⚠️ ИЗТЕКЛА ВИЗА!",
     "visaExpiredAlertDesc": "Срокът на вашата виза е изтекъл. Оставащото право на престой е 0 дни и влизането не е позволено.",
     "visaExpiringSoonTitle": "⏳ ИЗТИЧАЩА ВИЗА",
     "visaExpiringSoonDesc": "Визата ви изтича след {{days}} дни. С тази виза можете да останете най-много {{allowed}} дни.",
     "notificationVisaExpiringTitle": "⏳ Визата Ви Изтича Скоро!",
-    "notificationVisaExpiringBody": "Визата ви изтича след {{days}} дни. Можете да останете най-много {{allowed}} дни."
+    "notificationVisaExpiringBody": "Визата ви изтича след {{days}} дни. Можете да останете най-много {{allowed}} дни.",
+    "futureTripsTitle": "Бъдещи планове за пътуване",
+    "futurePlanNeeded": "Нужни са {{days}} дни",
+    "futurePlanSafe": "Оставащи при връщане: {{remaining}} дни",
+    "futurePlanTight": "Критично: остават само {{remaining}} дни",
+    "futurePlanOverstay": "⚠️ Превишаване с {{overstay}} дни! Променете връщането",
+    "futurePlanExpired": "⚠️ След изтичане на визата! (Невалидна)",
+    "notificationFutureOverstayTitle": "⚠️ Предупреждение за превишаване на визата!",
+    "notificationFutureOverstayBody": "Пътуването ви до {{country}} ще надвиши лимита от 90 дни с {{overstay}} дни."
   },
   "addTrip": {
     "ongoing": "Текущо Пътуване",
@@ -85,9 +94,12 @@
   "tripsList": {
     "title": "Твоите Пътувания",
     "addManually": "+ Ръчно Добавяне",
-    "empty": "Все още няма добавени пътувания.",
-    "totalTrips": "Общо Пътувания",
-    "closeOngoing": "Завърши Пътуването"
+    "empty": "Все още няма записани пътувания.",
+    "totalTrips": "Общо пътувания",
+    "closeOngoing": "Завърши Пътуването / Изход",
+    "activeSectionTitle": "Активни пътувания (Последни 180 дни и бъдещи)",
+    "archiveSectionTitle": "Архив (Пътувания над 180 дни)",
+    "archivedBadge": "Архив"
   },
   "visa": {
     "title": "Детайли за Виза",

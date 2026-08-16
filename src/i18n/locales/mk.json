@@ -54,13 +54,22 @@
     "addZone": "+ Dodadi Zona",
     "profilesTitle": "Profili",
     "nextAvailableTitle": "Sleden Razpolozliv Datum za Patuvanje",
+    "nextFreedTitle": "Datum na prvo osloboduvanje denovi",
     "nextAvailableSub": "dnovi se osloboduvaat",
     "visaExpiredAlertTitle": "⚠️ VIZATA E ISTECHENA!",
     "visaExpiredAlertDesc": "Vashata viza e istekana. Preostanatoto pravo na prestoj e 0 dnovi.",
     "visaExpiringSoonTitle": "⏳ PREDUPREDUVANJE ZA ISTEK NA VIZA",
     "visaExpiringSoonDesc": "Vizata vi istekuva za {{days}} dnovi. Mozhete da prestojuvate najmnogu {{allowed}} dnovi.",
     "notificationVisaExpiringTitle": "⏳ Vizata Vi Istekuva Naskoro!",
-    "notificationVisaExpiringBody": "Vizata vi istekuva za {{days}} dnovi. Mozhete da prestojuvate najmnogu {{allowed}} dnovi."
+    "notificationVisaExpiringBody": "Vizata vi istekuva za {{days}} dnovi. Mozhete da prestojuvate najmnogu {{allowed}} dnovi.",
+    "futureTripsTitle": "Идни планови за патување",
+    "futurePlanNeeded": "Потребни се {{days}} дена",
+    "futurePlanSafe": "Останати при враќање: {{remaining}} дена",
+    "futurePlanTight": "Критично: остануваат само {{remaining}} дена",
+    "futurePlanOverstay": "⚠️ Пречекорување со {{overstay}} дена! Променете го враќањето",
+    "futurePlanExpired": "⚠️ По истекот на визата! (Неважечка)",
+    "notificationFutureOverstayTitle": "⚠️ Предупредување за пречекорување на визата!",
+    "notificationFutureOverstayBody": "Вашето патување во {{country}} ќе го надмине лимитот од 90 дена за {{overstay}} дена."
   },
   "addTrip": {
     "ongoing": "Tekocho Patuvanje",
@@ -86,7 +95,10 @@
     "addManually": "+ Dodadi Patuvanje",
     "empty": "Nema zabelezheni patuvanja.",
     "totalTrips": "Vkupno Patuvanja",
-    "closeOngoing": "Zavrshi Patuvanje / Izlez"
+    "closeOngoing": "Zavrshi Patuvanje / Izlez",
+    "activeSectionTitle": "Aktivni Patuvanja (Posledni 180 dena i idni)",
+    "archiveSectionTitle": "Arhiva (Patuvanja postari od 180 dena)",
+    "archivedBadge": "Arhiva"
   },
   "visa": {
     "title": "Detali za Viza",

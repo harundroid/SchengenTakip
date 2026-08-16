@@ -74,6 +74,7 @@ export const COUNTRY_LIST: CountryOption[] = [
 export const SCHENGEN_ONLY_COUNTRIES = COUNTRY_LIST.filter(c => c.isSchengen).map(c => c.code);
 export const NON_SCHENGEN_COUNTRIES = COUNTRY_LIST.filter(c => !c.isSchengen).map(c => c.code);
 export const ALL_COUNTRIES = COUNTRY_LIST.map(c => c.code);
+export const SCHENGEN_SET = new Set(SCHENGEN_ONLY_COUNTRIES);
 
 /**
  * Resolves any string (ISO code 'MK' or English name 'North Macedonia')
@@ -85,9 +86,9 @@ export const getCountryCode = (input?: string): string => {
   if (clean.length === 2 && COUNTRY_LIST.some(c => c.code === clean.toUpperCase())) {
     return clean.toUpperCase();
   }
-  
-  const found = COUNTRY_LIST.find(c => 
-    c.code.toLowerCase() === clean.toLowerCase() || 
+
+  const found = COUNTRY_LIST.find(c =>
+    c.code.toLowerCase() === clean.toLowerCase() ||
     c.name.toLowerCase() === clean.toLowerCase()
   );
   return found ? found.code : clean.toUpperCase();
@@ -97,8 +98,8 @@ export const getCountryCode = (input?: string): string => {
  * Checks if a country (by ISO code or English name) belongs to the Schengen zone
  */
 export const isSchengenCountry = (input?: string): boolean => {
-  const code = getCountryCode(input);
-  return COUNTRY_LIST.some(c => c.code === code && c.isSchengen);
+  if (!input) return false;
+  return SCHENGEN_SET.has(getCountryCode(input));
 };
 
 /**

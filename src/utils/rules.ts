@@ -1,29 +1,51 @@
-import { differenceInDays, parseISO, isAfter, isBefore, isSameDay, subDays, addDays } from 'date-fns';
+import { differenceInDays, parseISO, isAfter, isBefore, isSameDay, subDays, addDays, startOfDay } from 'date-fns';
 import { Trip, VisaDetails } from '../types';
-import { SCHENGEN_ONLY_COUNTRIES, isSameCountry } from '../constants/countries';
+import { isSchengenCountry, isSameCountry } from '../constants/countries';
 
+const parseMidnight = (d: string | Date): Date => {
+  return startOfDay(typeof d === 'string' ? parseISO(d) : d);
+};
+
+/**
+ * Belirli tek bir seyahatin (Giriş - Çıkış tarihleri arasında) toplam kaç takvim günü sürdüğünü hesaplar.
+ * 
+ * Kurallar:
+ * 1. Schengen kuralına göre Giriş günü ve Çıkış günü her ikisi de tam gün sayılır (+1 gün kuralı).
+ * 2. Eğer seyahat halen devam ediyorsa (isOngoing = true), bitiş tarihi olarak bugünün tarihi (new Date()) baz alınır.
+ * 3. Geçersiz veya hatalı tarih girişlerinde NaN yerine güvenli şekilde 0 döner.
+ * 
+ * @param entry Giriş tarihi (ISO formatında string: 'YYYY-MM-DD')
+ * @param exit Çıkış tarihi (ISO formatında string: 'YYYY-MM-DD')
+ * @param isOngoing Seyahat halen devam ediyor mu? (Opsiyonel)
+ * @returns Toplam gün sayısı (tam sayı, minimum 0)
+ */
 export const calculateDaysForTrip = (entry: string, exit: string, isOngoing?: boolean): number => {
-  const start = parseISO(entry);
-  const end = isOngoing ? new Date() : parseISO(exit);
+  const start = parseMidnight(entry);
+  const end = isOngoing ? parseMidnight(new Date()) : parseMidnight(exit);
   const days = differenceInDays(end, start) + 1;
   return isNaN(days) ? 0 : Math.max(0, days);
 };
 
+/**
+ * Kullanıcının tüm seyahatlerini tarayarak ülke bazında harcanan toplam gün sayılarını hesaplar.
+ * 
+ * @param trips Kullanıcının kayıtlı tüm seyahat listesi
+ * @returns Ülke kodlarına göre toplam gün sözlüğü. Örn: { "gr": 15, "de": 8, "bg": 4 }
+ */
 export const aggregateCountryDays = (trips: Trip[]): Record<string, number> => {
   const countryDays: Record<string, number> = {};
 
   trips.forEach(trip => {
-    const isOldTrip = !!trip.country;
-    const isMultiCountry = !isOldTrip && trip.entryCountry !== trip.exitCountry && trip.segments && trip.segments.length > 0;
+    const hasSegments = trip.segments && trip.segments.length > 0;
     
-    if (isMultiCountry && trip.segments) {
-      trip.segments.forEach(seg => {
+    if (hasSegments) {
+      trip.segments!.forEach(seg => {
         const c = seg.country.trim().toLowerCase();
         countryDays[c] = (countryDays[c] || 0) + seg.days;
       });
     } else {
       const days = calculateDaysForTrip(trip.entryDate, trip.exitDate, trip.isOngoing);
-      const c = (trip.country || trip.entryCountry || '').trim().toLowerCase();
+      const c = (trip.entryCountry || '').trim().toLowerCase();
       if (c) {
         countryDays[c] = (countryDays[c] || 0) + days;
       }
@@ -41,6 +63,7 @@ export const calculate90180Rule = (
   const maxDaysAllowed = visaDetails?.maxDays || 90;
   const isSingleCountryMode = visaDetails?.trackingMode === 'SINGLE_COUNTRY';
   const targetCountry = visaDetails?.targetCountry || visaDetails?.country || 'TR';
+  const todayMidnight = parseMidnight(referenceDate);
 
   // Check Visa Expiration Status if visa is defined and not visa exempt
   let isVisaExpired = false;
@@ -48,9 +71,8 @@ export const calculate90180Rule = (
   let daysUntilVisaExpires: number | null = null;
 
   if (visaDetails && !visaDetails.isVisaExempt && visaDetails.validUntil) {
-    const today = new Date(referenceDate.getFullYear(), referenceDate.getMonth(), referenceDate.getDate());
-    const visaEnd = parseISO(visaDetails.validUntil);
-    const diff = differenceInDays(visaEnd, today);
+    const visaEnd = parseMidnight(visaDetails.validUntil);
+    const diff = differenceInDays(visaEnd, todayMidnight);
 
     daysUntilVisaExpires = diff;
     if (diff < 0) {
@@ -63,25 +85,36 @@ export const calculate90180Rule = (
   // Helper to check if a trip matches zone filter
   const isTripMatchingZone = (trip: Trip) => {
     if (isSingleCountryMode) {
-      const hasSegments = trip.segments && trip.segments.length > 0;
-      if (hasSegments) {
-        return trip.segments!.some(s => isSameCountry(s.country, targetCountry));
+      if (trip.segments && trip.segments.length > 0) {
+        return trip.segments.some(s => isSameCountry(s.country, targetCountry));
       }
-      const entryC = trip.entryCountry || trip.country || '';
-      const exitC = trip.exitCountry || trip.country || '';
-      return isSameCountry(entryC, targetCountry) || isSameCountry(exitC, targetCountry);
+      return isSameCountry(trip.entryCountry, targetCountry) || isSameCountry(trip.exitCountry, targetCountry);
     } else {
-      // SCHENGEN MODE: Only count trips involving Schengen member states!
-      const entryC = trip.entryCountry || trip.country || '';
-      const exitC = trip.exitCountry || trip.country || '';
-      const entryIn = SCHENGEN_ONLY_COUNTRIES.some(sc => isSameCountry(sc, entryC));
-      const exitIn = SCHENGEN_ONLY_COUNTRIES.some(sc => isSameCountry(sc, exitC));
-      const segIn = trip.segments && trip.segments.some(s => SCHENGEN_ONLY_COUNTRIES.some(sc => isSameCountry(sc, s.country)));
-      return entryIn || exitIn || segIn;
+      if (trip.segments && trip.segments.length > 0) {
+        return trip.segments.some(s => isSchengenCountry(s.country));
+      }
+      return isSchengenCountry(trip.entryCountry) || isSchengenCountry(trip.exitCountry);
     }
   };
 
-  const relevantTrips = trips.filter(isTripMatchingZone);
+  // Vize başlangıç tarihi (varsa) ve 180 günlük hareketli pencere başlangıcı
+  const visaStartDate = (visaDetails && !visaDetails.isVisaExempt && visaDetails.validFrom) 
+    ? parseMidnight(visaDetails.validFrom) 
+    : null;
+
+  // Filter only trips matching zone AND strictly relevant to current visa & 180-day windows
+  let minActiveDate = subDays(todayMidnight, 179);
+  if (visaStartDate && isAfter(visaStartDate, minActiveDate)) {
+    minActiveDate = visaStartDate;
+  }
+
+  const relevantTrips = trips.filter(trip => {
+    if (!isTripMatchingZone(trip)) return false;
+    if (trip.isOngoing) return true;
+    const tExit = parseMidnight(trip.exitDate);
+    // Vize başlangıcından veya 180 günden daha eski bitmiş seyahatleri hesaba katma
+    return !isBefore(tExit, minActiveDate);
+  });
 
   if (isVisaExpired) {
     return {
@@ -116,18 +149,36 @@ export const calculate90180Rule = (
     };
   }
 
-  // Calculate days spent in 180-day window for a given date D
+  /**
+   * Belirli bir kontrol tarihi (checkDate) için geriye dönük 180 günlük hareketli pencereye
+   * (ve varsa vize başlangıç tarihine) denk gelen toplam seyahat gün sayısını kesişim yöntemiyle hesaplar.
+   * 
+   * @param checkDate 180 günlük pencerenin son günü kabul edilen referans tarihi
+   * @returns Bu pencereye düşen toplam kalış gün sayısı
+   */
   const calculateDaysInWindowForDate = (checkDate: Date) => {
-    const windowStart = subDays(checkDate, 179);
+    const checkMidnight = parseMidnight(checkDate);
+    let windowStart = subDays(checkMidnight, 179);
+    if (visaStartDate && isAfter(visaStartDate, windowStart)) {
+      windowStart = visaStartDate;
+    }
+
     let daysCount = 0;
 
     relevantTrips.forEach(t => {
-      const tEntry = parseISO(t.entryDate);
-      const tExit = t.isOngoing ? checkDate : parseISO(t.exitDate);
+      const tEntry = parseMidnight(t.entryDate);
+      const tExit = t.isOngoing ? checkMidnight : parseMidnight(t.exitDate);
 
+      // Seyahat pencerenin tamamen dışındaysa direkt atla
+      if (isBefore(tExit, windowStart) || isAfter(tEntry, checkMidnight)) {
+        return;
+      }
+
+      // Seyahat aralığı ile pencere aralığının ortak kesişimini bul
       const overlapStart = isBefore(tEntry, windowStart) ? windowStart : tEntry;
-      const overlapEnd = isAfter(tExit, checkDate) ? checkDate : tExit;
+      const overlapEnd = isAfter(tExit, checkMidnight) ? checkMidnight : tExit;
 
+      // Kesişim varsa (+1 gün kuralı ile) gün sayısını ekle
       if (isBefore(overlapStart, overlapEnd) || isSameDay(overlapStart, overlapEnd)) {
         const d = differenceInDays(overlapEnd, overlapStart) + 1;
         if (!isNaN(d) && d > 0) {
@@ -139,27 +190,30 @@ export const calculate90180Rule = (
     return daysCount;
   };
 
-  // Check today's days spent
-  const daysSpentToday = calculateDaysInWindowForDate(referenceDate);
+  // 1. Calculate days spent in the 180-day window ending on referenceDate (Today)
+  const daysSpentToday = calculateDaysInWindowForDate(todayMidnight);
 
-  // Evaluate peak days spent in 180-day window across all trip dates (including planned future dates)
-  let maxDaysInAnyWindow = daysSpentToday;
+  // 2. Evaluate peak days in 180-day window for future planned trips (from todayMidnight onwards)
+  let peakFutureDaysInWindow = daysSpentToday;
 
   relevantTrips.forEach(t => {
-    const tEntry = parseISO(t.entryDate);
-    const tExit = t.isOngoing ? referenceDate : parseISO(t.exitDate);
+    const tEntry = parseMidnight(t.entryDate);
+    const tExit = t.isOngoing ? todayMidnight : parseMidnight(t.exitDate);
 
-    let curr = tEntry;
+    // Only scan forward from todayMidnight (future dates)
+    let curr = isBefore(tEntry, todayMidnight) ? todayMidnight : tEntry;
     while (isBefore(curr, tExit) || isSameDay(curr, tExit)) {
       const dSpent = calculateDaysInWindowForDate(curr);
-      if (dSpent > maxDaysInAnyWindow) {
-        maxDaysInAnyWindow = dSpent;
+      if (dSpent > peakFutureDaysInWindow) {
+        peakFutureDaysInWindow = dSpent;
       }
       curr = addDays(curr, 1);
     }
   });
 
-  const effectiveDaysSpent = maxDaysInAnyWindow;
+  // Today's effective days spent is strictly what's spent in today's 180-day window
+  const effectiveDaysSpent = daysSpentToday;
+  const isViolated = peakFutureDaysInWindow > maxDaysAllowed;
 
   const formatISO = (date: Date) => {
     const yyyy = date.getFullYear();
@@ -168,24 +222,48 @@ export const calculate90180Rule = (
     return `${yyyy}-${mm}-${dd}`;
   };
 
+  // Geçmiş ve şu ana kadar harcanan günlerin havuzu (Gelecek planları bu serbest kalma hesabını bozmasın)
+  const pastAndCurrentTrips = relevantTrips.filter(t => {
+    const tEntry = parseMidnight(t.entryDate);
+    return isBefore(tEntry, todayMidnight) || isSameDay(tEntry, todayMidnight);
+  });
+
+  const calculatePastDaysInWindow = (checkDate: Date) => {
+    const checkMidnight = parseMidnight(checkDate);
+    let windowStart = subDays(checkMidnight, 179);
+    if (visaStartDate && isAfter(visaStartDate, windowStart)) {
+      windowStart = visaStartDate;
+    }
+
+    let count = 0;
+    pastAndCurrentTrips.forEach(t => {
+      const tEntry = parseMidnight(t.entryDate);
+      const tExit = t.isOngoing ? todayMidnight : parseMidnight(t.exitDate);
+
+      if (isBefore(tExit, windowStart) || isAfter(tEntry, checkMidnight)) return;
+
+      const overlapStart = isBefore(tEntry, windowStart) ? windowStart : tEntry;
+      const overlapEnd = isAfter(tExit, checkMidnight) ? checkMidnight : tExit;
+
+      if (isBefore(overlapStart, overlapEnd) || isSameDay(overlapStart, overlapEnd)) {
+        const d = differenceInDays(overlapEnd, overlapStart) + 1;
+        if (!isNaN(d) && d > 0) count += d;
+      }
+    });
+    return count;
+  };
+
   let nextAvailableDate: string | null = null;
   let freedDays = 0;
 
-  if (effectiveDaysSpent >= maxDaysAllowed) {
-    let searchStart = referenceDate;
-    relevantTrips.forEach(t => {
-      const tEnd = t.isOngoing ? referenceDate : parseISO(t.exitDate);
-      if (isAfter(tEnd, searchStart)) {
-        searchStart = tEnd;
-      }
-    });
-
-    let searchDate = addDays(searchStart, 1);
-    for (let i = 0; i < 365; i++) {
-      const dInWindow = calculateDaysInWindowForDate(searchDate);
-      if (dInWindow < maxDaysAllowed) {
+  // Geçmişte harcanmış gün varsa, ilk ne zaman o günlerden biri 180 günlük pencereden düşüp hak genişleyecek?
+  if (daysSpentToday > 0) {
+    let searchDate = addDays(todayMidnight, 1);
+    for (let i = 0; i < 180; i++) {
+      const dInWindow = calculatePastDaysInWindow(searchDate);
+      if (dInWindow < daysSpentToday) {
         nextAvailableDate = formatISO(searchDate);
-        freedDays = maxDaysAllowed - dInWindow;
+        freedDays = daysSpentToday - dInWindow;
         break;
       }
       searchDate = addDays(searchDate, 1);
@@ -200,7 +278,7 @@ export const calculate90180Rule = (
   return {
     daysSpent: effectiveDaysSpent,
     daysRemaining: calculatedRemaining,
-    isViolated: effectiveDaysSpent > maxDaysAllowed,
+    isViolated,
     maxDaysAllowed,
     nextAvailableDate,
     freedDays,
@@ -210,10 +288,15 @@ export const calculate90180Rule = (
   };
 };
 
-export const calculateMainDestination = (trips: Trip[], visaCountry: string) => {
+export const calculateMainDestination = (trips: Trip[], visaCountry: string, validFrom?: string) => {
   if (!visaCountry || trips.length === 0) return { isValid: true, stats: {} as Record<string, number>, visaCountryDays: 0, maxDays: 0 };
 
-  const countryDays = aggregateCountryDays(trips);
+  // Sadece mevcut vize süresine (validFrom sonrası) ait seyahatleri ana hedef ülke hesabına dahil et
+  const currentVisaTrips = validFrom
+    ? trips.filter(t => t.isOngoing || !isBefore(parseMidnight(t.exitDate), parseMidnight(validFrom)))
+    : trips;
+
+  const countryDays = aggregateCountryDays(currentVisaTrips);
 
   let maxDays = 0;
   for (const country in countryDays) {
@@ -232,5 +315,104 @@ export const calculateMainDestination = (trips: Trip[], visaCountry: string) => 
     stats: countryDays,
     visaCountryDays,
     maxDays,
+  };
+};
+
+export interface FutureTripQuotaResult {
+  daysNeeded: number;
+  daysSpentAtExit: number;
+  remainingAtExit: number;
+  overstayDays: number;
+  status: 'SAFE' | 'TIGHT' | 'OVERSTAY' | 'VISA_EXPIRED';
+  isVisaExpiredAtTrip: boolean;
+}
+
+/**
+ * Geleceğe planlanmış belirli bir seyahatin dönüş tarihindeki 180 günlük hareketli pencereyi
+ * simüle ederek, seyahat için yeterli vize kotası olup olmadığını ve dönüşte kaç gün kalacağını hesaplar.
+ * 
+ * @param targetTrip Değerlendirilecek gelecek seyahat
+ * @param allRelevantTrips Bu bölgeye ait tüm seyahatler (geçmiş + planlanmış tüm geziler)
+ * @param maxDaysAllowed Vize gün limiti (varsayılan 90)
+ * @param visaValidUntil Vize son geçerlilik tarihi (opsiyonel)
+ */
+export const calculateFutureTripQuota = (
+  targetTrip: Trip,
+  allRelevantTrips: Trip[],
+  maxDaysAllowed: number = 90,
+  visaValidUntil?: string,
+  visaValidFrom?: string
+): FutureTripQuotaResult => {
+  const tEntry = parseMidnight(targetTrip.entryDate);
+  const tExit = parseMidnight(targetTrip.exitDate);
+  const daysNeeded = Math.max(1, differenceInDays(tExit, tEntry) + 1);
+
+  // Vize geçerlilik süresini aşıp aşmadığını kontrol et
+  let isVisaExpiredAtTrip = false;
+  if (visaValidUntil) {
+    const vEnd = parseMidnight(visaValidUntil);
+    if (isAfter(tExit, vEnd)) {
+      isVisaExpiredAtTrip = true;
+    }
+  }
+
+  const vStart = visaValidFrom ? parseMidnight(visaValidFrom) : null;
+
+  // Seyahatin her bir günündeki 180 günlük pencerede maksimum harcanan günü bul
+  let maxDaysDuringTrip = 0;
+  let curr = tEntry;
+
+  while (isBefore(curr, tExit) || isSameDay(curr, tExit)) {
+    let windowStart = subDays(curr, 179);
+    if (vStart && isAfter(vStart, windowStart)) {
+      windowStart = vStart;
+    }
+    let count = 0;
+
+    allRelevantTrips.forEach(t => {
+      const e = parseMidnight(t.entryDate);
+      const x = t.isOngoing ? curr : parseMidnight(t.exitDate);
+
+      if (isBefore(x, windowStart) || isAfter(e, curr)) {
+        return;
+      }
+
+      const overlapStart = isBefore(e, windowStart) ? windowStart : e;
+      const overlapEnd = isAfter(x, curr) ? curr : x;
+
+      if (isBefore(overlapStart, overlapEnd) || isSameDay(overlapStart, overlapEnd)) {
+        const d = differenceInDays(overlapEnd, overlapStart) + 1;
+        if (!isNaN(d) && d > 0) {
+          count += d;
+        }
+      }
+    });
+
+    if (count > maxDaysDuringTrip) {
+      maxDaysDuringTrip = count;
+    }
+
+    curr = addDays(curr, 1);
+  }
+
+  const remainingAtExit = Math.max(0, maxDaysAllowed - maxDaysDuringTrip);
+  const overstayDays = Math.max(0, maxDaysDuringTrip - maxDaysAllowed);
+
+  let status: FutureTripQuotaResult['status'] = 'SAFE';
+  if (isVisaExpiredAtTrip) {
+    status = 'VISA_EXPIRED';
+  } else if (overstayDays > 0) {
+    status = 'OVERSTAY';
+  } else if (remainingAtExit <= 5) {
+    status = 'TIGHT';
+  }
+
+  return {
+    daysNeeded,
+    daysSpentAtExit: maxDaysDuringTrip,
+    remainingAtExit,
+    overstayDays,
+    status,
+    isVisaExpiredAtTrip,
   };
 };

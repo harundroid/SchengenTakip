@@ -21,6 +21,9 @@ export const AdBanner: React.FC<AdBannerProps> = ({ style }) => {
       <BannerAd
         unitId={AD_UNIT_IDS.BANNER}
         size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER}
+        requestOptions={{
+          requestNonPersonalizedAdsOnly: true,
+        }}
         onAdFailedToLoad={(error) => {
           console.warn('Banner Ad failed to load:', error);
           setAdFailed(true);

@@ -66,3 +66,5 @@ Thumbs.db
 # Raw Design Drafts in Root Directory
 schengenRuleTracker.png
 schengen rule tracker*.png
+*.xcarchive
+SchengenRuleTracker*/

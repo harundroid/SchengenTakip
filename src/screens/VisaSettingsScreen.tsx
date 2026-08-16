@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, TextInput, StyleSheet, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView, Switch, Alert } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Picker } from '@react-native-picker/picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -20,6 +20,7 @@ const formatLocal = (date: Date) => {
 };
 
 export const VisaSettingsScreen = () => {
+  const insets = useSafeAreaInsets();
   const navigation = useNavigation();
   const route = useRoute<any>();
   const { t, i18n } = useTranslation();
@@ -218,11 +219,26 @@ export const VisaSettingsScreen = () => {
   const dynamicStyles = getStyles(colors, isDark);
 
   return (
-    <SafeAreaView style={dynamicStyles.container}>
+    <SafeAreaView style={dynamicStyles.container} edges={['left', 'right', 'bottom']}>
+      {/* HEADER */}
+      <View style={[
+        dynamicStyles.header,
+        { paddingTop: Platform.OS === 'ios' ? Math.max(insets.top, 20) + 8 : 16 }
+      ]}>
+        <TouchableOpacity 
+          style={dynamicStyles.backBtn} 
+          onPress={() => navigation.goBack()}
+          hitSlop={{ top: 25, bottom: 25, left: 25, right: 25 }}
+          activeOpacity={0.7}
+        >
+          <Text style={dynamicStyles.backBtnText}>‹ {t('common.back') || 'Geri'}</Text>
+        </TouchableOpacity>
+        <Text style={dynamicStyles.title}>{t('visa.title')}</Text>
+        <View style={dynamicStyles.placeholder} />
+      </View>
+
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={dynamicStyles.scroll}>
-          <Text style={dynamicStyles.title}>{t('visa.title')}</Text>
-
           {/* ZONE SELECTION BAR INSIDE VISA SETTINGS */}
           <Text style={dynamicStyles.sectionHeader}>{t('visa.selectRegionHeader', { defaultValue: 'Hangi Bölge/Ülke İçin Vize Ayarlıyorsunuz?' })}</Text>
           <View style={dynamicStyles.zoneSelectBar}>
@@ -437,14 +453,40 @@ const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
-  scroll: {
-    padding: 20,
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingTop: Platform.OS === 'ios' ? 12 : 16,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  backBtn: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    backgroundColor: colors.surface,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  backBtnText: {
+    fontSize: 15,
+    color: colors.bauhausBlue,
+    fontWeight: '800',
   },
   title: {
-    fontSize: 24,
+    fontSize: 18,
     fontWeight: '800',
     color: colors.text,
-    marginBottom: 16,
+  },
+  placeholder: {
+    width: 60,
+  },
+  scroll: {
+    padding: 20,
   },
   sectionHeader: {
     fontSize: 12,

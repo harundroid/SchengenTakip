@@ -54,13 +54,22 @@
     "addZone": "+ Προσθήκη Ζώνης",
     "profilesTitle": "Προφίλ",
     "nextAvailableTitle": "Επόμενη Διαθέσιμη Ημερομηνία Ταξιδιού",
+    "nextFreedTitle": "Ημερομηνία επέκτασης δικαιώματος",
     "nextAvailableSub": "ημέρες ελευθερώνονται",
     "visaExpiredAlertTitle": "⚠️ Η ΒΙΖΑ ΕΧΕΙ ΛΗΞΕΙ!",
     "visaExpiredAlertDesc": "Η βίζα σας έχει λήξει. Η εναπομείνουσα επιτρεπόμενη διαμονή είναι 0 ημέρες.",
     "visaExpiringSoonTitle": "⏳ ΠΡΟΕΙΔΟΠΟΙΗΣΗ ΛΗΞΗΣ ΒΙΖΑΣ",
     "visaExpiringSoonDesc": "Η βίζα σας λήγει σε {{days}} ημέρες. Μπορείτε να μείνετε το πολύ {{allowed}} ημέρες.",
     "notificationVisaExpiringTitle": "⏳ Η Βίζα Σας Λήγει Σύντομα!",
-    "notificationVisaExpiringBody": "Η βίζα σας λήγει σε {{days}} ημέρες. Μπορείτε να μείνετε το πολύ {{allowed}} ημέρες."
+    "notificationVisaExpiringBody": "Η βίζα σας λήγει σε {{days}} ημέρες. Μπορείτε να μείνετε το πολύ {{allowed}} ημέρες.",
+    "futureTripsTitle": "Μελλοντικά Σχέδια Ταξιδιού",
+    "futurePlanNeeded": "Χρειάζονται {{days}} μέρες",
+    "futurePlanSafe": "Απομένουν κατά την επιστροφή: {{remaining}} μέρες",
+    "futurePlanTight": "Κρίσιμο: Απομένουν μόνο {{remaining}} μέρες",
+    "futurePlanOverstay": "⚠️ Υπέρβαση κατά {{overstay}} μέρες! Αλλάξτε την επιστροφή",
+    "futurePlanExpired": "⚠️ Μετά τη λήξη της βίζας! (Άκυρη)",
+    "notificationFutureOverstayTitle": "⚠️ Προειδοποίηση υπέρβασης βίζας!",
+    "notificationFutureOverstayBody": "Το ταξίδι σας στο {{country}} θα υπερβεί το όριο των 90 ημερών κατά {{overstay}} μέρες."
   },
   "addTrip": {
     "ongoing": "Τρέχον Ταξίδι",
@@ -86,7 +95,10 @@
     "addManually": "+ Προσθήκη Ταξιδιού",
     "empty": "Δεν υπάρχουν καταγεγραμμένα ταξίδια.",
     "totalTrips": "Συνολικά Ταξίδια",
-    "closeOngoing": "Ολοκλήρωση Ταξιδιού / Έξοδος"
+    "closeOngoing": "Ολοκλήρωση Ταξιδιού / Έξοδος",
+    "activeSectionTitle": "Ενεργά Ταξίδια (Τελευταίες 180 ημέρες & Μελλοντικά)",
+    "archiveSectionTitle": "Αρχείο (Ταξίδια >180 ημερών)",
+    "archivedBadge": "Αρχείο"
   },
   "visa": {
     "title": "Λεπτομέρειες Βίζας",

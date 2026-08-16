@@ -55,13 +55,22 @@
     "addPerson": "+ Kişi Ekle",
     "profilesTitle": "Profiller",
     "nextAvailableTitle": "Sonraki Seyahat Tarihi",
+    "nextFreedTitle": "İlk Hak Genişleme Tarihi",
     "nextAvailableSub": "gün serbest kalıyor",
     "visaExpiredAlertTitle": "⚠️ VİZE SÜRESİ DOLDU!",
     "visaExpiredAlertDesc": "Vizenizin geçerlilik süresi dolmuştur. Kalan kalış hakkınız 0 gündür ve giriş hakkınız bulunmamaktadır.",
     "visaExpiringSoonTitle": "⏳ VİZE BİTİŞ UYARISI",
     "visaExpiringSoonDesc": "Vizenizin dolmasına {{days}} gün kaldı. Bu vize ile en fazla {{allowed}} gün kalabilirsiniz.",
     "notificationVisaExpiringTitle": "⏳ Vize Süreniz Dolmak Üzere!",
-    "notificationVisaExpiringBody": "Vizenizin dolmasına {{days}} gün kaldı. Bu vize ile en fazla {{allowed}} gün kalabilirsiniz."
+    "notificationVisaExpiringBody": "Vizenizin dolmasına {{days}} gün kaldı. Bu vize ile en fazla {{allowed}} gün kalabilirsiniz.",
+    "futureTripsTitle": "Gelecek Seyahat Planları",
+    "futurePlanNeeded": "{{days}} gün gerekli",
+    "futurePlanSafe": "Dönüşte Kalan: {{remaining}} Gün",
+    "futurePlanTight": "Kritik: Dönüşte sadece {{remaining}} gün kalıyor",
+    "futurePlanOverstay": "⚠️ {{overstay}} Gün İhlal Oluşuyor! Dönüşü erkene çekin",
+    "futurePlanExpired": "⚠️ Vize Bitişinden Sonra! (Vize Geçersiz)",
+    "notificationFutureOverstayTitle": "⚠️ Gelecek Seyahat İhlal Uyarısı!",
+    "notificationFutureOverstayBody": "{{country}} seyahatiniz 90 günlük sınırı {{overstay}} gün aşıyor. Biletinizi erkene çekmeniz önerilir."
   },
   "addTrip": {
     "ongoing": "Devam Eden Seyahat",
@@ -87,7 +96,10 @@
     "addManually": "+ Manuel Seyahat Ekle",
     "empty": "Henüz seyahat kaydı bulunmuyor.",
     "totalTrips": "Toplam Seyahat",
-    "closeOngoing": "Seyahati Tamamla / Çıkış Yap"
+    "closeOngoing": "Seyahati Tamamla / Çıkış Yap",
+    "activeSectionTitle": "Aktif Seyahatler (Son 180 Gün & Gelecek)",
+    "archiveSectionTitle": "Arşiv (180 Günden Eski Seyahatler)",
+    "archivedBadge": "Arşiv"
   },
   "visa": {
     "title": "Vize Detayları",

@@ -55,13 +55,22 @@
     "addPerson": "+ Add Person",
     "profilesTitle": "Profiles",
     "nextAvailableTitle": "Next Available Travel Date",
+    "nextFreedTitle": "Allowance Expansion Date",
     "nextAvailableSub": "days free up",
     "visaExpiredAlertTitle": "⚠️ VISA EXPIRED!",
     "visaExpiredAlertDesc": "Your visa has expired. Your remaining allowed stay is 0 days and entry is not permitted.",
     "visaExpiringSoonTitle": "⏳ VISA EXPIRING SOON",
     "visaExpiringSoonDesc": "Your visa expires in {{days}} days. You may stay at most {{allowed}} days with this visa.",
     "notificationVisaExpiringTitle": "⏳ Visa Expiring Soon!",
-    "notificationVisaExpiringBody": "Your visa expires in {{days}} days. You may stay at most {{allowed}} days with this visa."
+    "notificationVisaExpiringBody": "Your visa expires in {{days}} days. You may stay at most {{allowed}} days with this visa.",
+    "futureTripsTitle": "Future Trip Plans",
+    "futurePlanNeeded": "{{days}} days needed",
+    "futurePlanSafe": "Remaining on Return: {{remaining}} Days",
+    "futurePlanTight": "Tight: Only {{remaining}} days left on return",
+    "futurePlanOverstay": "⚠️ Overstay by {{overstay}} days! Adjust return date",
+    "futurePlanExpired": "⚠️ After Visa Expiration! (Invalid Visa)",
+    "notificationFutureOverstayTitle": "⚠️ Upcoming Trip Visa Overstay Alert!",
+    "notificationFutureOverstayBody": "Your trip to {{country}} will exceed the 90-day limit by {{overstay}} days. Consider adjusting your return date."
   },
   "addTrip": {
     "ongoing": "Ongoing Trip",
@@ -85,9 +94,12 @@
   "tripsList": {
     "title": "Your Trips",
     "addManually": "+ Add Trip Manually",
-    "empty": "No trips logged yet.",
+    "empty": "No trips recorded yet.",
     "totalTrips": "Total Trips",
-    "closeOngoing": "Complete Trip / Log Exit"
+    "closeOngoing": "Complete Trip / Log Exit",
+    "activeSectionTitle": "Active Trips (Last 180 Days & Future)",
+    "archiveSectionTitle": "Archive (Past Trips >180 Days)",
+    "archivedBadge": "Archived"
   },
   "visa": {
     "title": "Visa Details",
