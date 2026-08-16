@@ -97,22 +97,14 @@ export const calculate90180Rule = (
     }
   };
 
-  // Vize başlangıç tarihi (varsa) ve 180 günlük hareketli pencere başlangıcı
-  const visaStartDate = (visaDetails && !visaDetails.isVisaExempt && visaDetails.validFrom) 
-    ? parseMidnight(visaDetails.validFrom) 
-    : null;
-
-  // Filter only trips matching zone AND strictly relevant to current visa & 180-day windows
-  let minActiveDate = subDays(todayMidnight, 179);
-  if (visaStartDate && isAfter(visaStartDate, minActiveDate)) {
-    minActiveDate = visaStartDate;
-  }
+  // Filter only trips matching zone AND strictly relevant to 180-day window
+  const minActiveDate = subDays(todayMidnight, 179);
 
   const relevantTrips = trips.filter(trip => {
     if (!isTripMatchingZone(trip)) return false;
     if (trip.isOngoing) return true;
     const tExit = parseMidnight(trip.exitDate);
-    // Vize başlangıcından veya 180 günden daha eski bitmiş seyahatleri hesaba katma
+    // 180 günden daha eski bitmiş seyahatleri hesaba katma
     return !isBefore(tExit, minActiveDate);
   });
 
@@ -158,10 +150,7 @@ export const calculate90180Rule = (
    */
   const calculateDaysInWindowForDate = (checkDate: Date) => {
     const checkMidnight = parseMidnight(checkDate);
-    let windowStart = subDays(checkMidnight, 179);
-    if (visaStartDate && isAfter(visaStartDate, windowStart)) {
-      windowStart = visaStartDate;
-    }
+    const windowStart = subDays(checkMidnight, 179);
 
     let daysCount = 0;
 
@@ -230,10 +219,7 @@ export const calculate90180Rule = (
 
   const calculatePastDaysInWindow = (checkDate: Date) => {
     const checkMidnight = parseMidnight(checkDate);
-    let windowStart = subDays(checkMidnight, 179);
-    if (visaStartDate && isAfter(visaStartDate, windowStart)) {
-      windowStart = visaStartDate;
-    }
+    const windowStart = subDays(checkMidnight, 179);
 
     let count = 0;
     pastAndCurrentTrips.forEach(t => {
@@ -363,10 +349,7 @@ export const calculateFutureTripQuota = (
   let curr = tEntry;
 
   while (isBefore(curr, tExit) || isSameDay(curr, tExit)) {
-    let windowStart = subDays(curr, 179);
-    if (vStart && isAfter(vStart, windowStart)) {
-      windowStart = vStart;
-    }
+    const windowStart = subDays(curr, 179);
     let count = 0;
 
     allRelevantTrips.forEach(t => {

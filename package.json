@@ -18,7 +18,6 @@
     "expo-image": "~57.0.1",
     "expo-linking": "~57.0.3",
     "expo-localization": "~16.0.0",
-    "expo-notifications": "~0.29.13",
     "expo-splash-screen": "~57.0.4",
     "expo-status-bar": "~57.0.1",
     "expo-symbols": "~57.0.1",

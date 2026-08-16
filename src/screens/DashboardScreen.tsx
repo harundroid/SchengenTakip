@@ -818,11 +818,17 @@ export const DashboardScreen = () => {
                   key={trip.id}
                   style={cardStyle}
                   activeOpacity={0.7}
-                  onPress={() => navigation.navigate('AddTrip', {
-                    tripId: trip.id,
-                    trackingMode: currentZone.trackingMode,
-                    targetCountry: currentZone.targetCountry,
-                  })}
+                  onPress={() => {
+                    const tripMode = (isSchengenCountry(trip.entryCountry) || isSchengenCountry(trip.exitCountry))
+                      ? 'SCHENGEN'
+                      : 'SINGLE_COUNTRY';
+                    const tripTarget = tripMode === 'SINGLE_COUNTRY' ? getCountryCode(trip.entryCountry || trip.exitCountry) : undefined;
+                    navigation.navigate('AddTrip', {
+                      tripId: trip.id,
+                      trackingMode: tripMode,
+                      targetCountry: tripTarget,
+                    });
+                  }}
                 >
                   <View style={dynamicStyles.futureTripTopRow}>
                     <Text style={dynamicStyles.futureTripDestination}>📍 {routeLabel}</Text>

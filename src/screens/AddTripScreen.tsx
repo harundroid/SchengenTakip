@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView, TextInput, Switch, Alert } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
@@ -6,14 +6,14 @@ import { Picker } from '@react-native-picker/picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useTripStore } from '../store/useTripStore';
 import { RootStackParamList } from '../navigation/AppNavigator';
-import { TripSegment } from '../types';
+import { TripSegment, TrackingMode } from '../types';
 import { differenceInDays, parseISO } from 'date-fns';
 import { useTranslation } from 'react-i18next';
 import { showCompletedFlowInterstitial } from '../config/ads';
 import { AdBanner } from '../components/AdBanner';
 import { useAppTheme } from '../theme/ThemeContext';
 import { validateTripForm } from '../utils/validation';
-import { SCHENGEN_ONLY_COUNTRIES, getCountryCode } from '../constants/countries';
+import { SCHENGEN_ONLY_COUNTRIES, getCountryCode, isSchengenCountry } from '../constants/countries';
 
 const formatLocal = (date: Date) => {
   const yyyy = date.getFullYear();
@@ -41,14 +41,98 @@ export const AddTripScreen = () => {
   const existingTripId = route.params?.tripId;
   const existingTrip = activePerson?.trips.find(t => t.id === existingTripId);
 
-  const visaDetails = activePerson?.visaDetails;
-  
-  // Determine tracking mode and target country from route params or active profile visa details
-  const trackingMode = route.params?.trackingMode || visaDetails?.trackingMode || (i18n.language === 'bg' ? 'SINGLE_COUNTRY' : 'SCHENGEN');
-  const rawTargetCountry = route.params?.targetCountry || visaDetails?.targetCountry || (i18n.language === 'bg' ? 'TR' : 'AT');
-  const targetCountry = getCountryCode(rawTargetCountry);
+  // 1. Gather all available tracking zones / visas for active person
+  const availableZones = useMemo(() => {
+    const list: Array<{ id: string; name: string; trackingMode: TrackingMode; targetCountry?: string }> = [];
 
-  const isSingleCountryMode = trackingMode === 'SINGLE_COUNTRY' && Boolean(targetCountry);
+    // Always include Schengen Zone
+    list.push({
+      id: 'schengen',
+      name: '🇪🇺 Schengen Zone',
+      trackingMode: 'SCHENGEN',
+    });
+
+    // Custom zones configured on person
+    if (activePerson?.zones && activePerson.zones.length > 0) {
+      activePerson.zones.forEach((z) => {
+        if (z.id !== 'schengen' && !list.some((item) => item.id === z.id)) {
+          const countryCode = z.targetCountry || z.id;
+          list.push({
+            id: z.id,
+            name: z.name || t(`countries.${countryCode}`, { defaultValue: countryCode }),
+            trackingMode: z.trackingMode,
+            targetCountry: countryCode,
+          });
+        }
+      });
+    }
+
+    // Any zoneVisaDetails keys that are non-Schengen
+    if (activePerson?.zoneVisaDetails) {
+      Object.keys(activePerson.zoneVisaDetails).forEach((key) => {
+        if (key !== 'schengen' && !list.some((item) => item.id === key)) {
+          const details = activePerson.zoneVisaDetails![key];
+          const countryCode = details?.targetCountry || key;
+          list.push({
+            id: key,
+            name: t(`countries.${countryCode}`, { defaultValue: countryCode }),
+            trackingMode: 'SINGLE_COUNTRY',
+            targetCountry: countryCode,
+          });
+        }
+      });
+    }
+
+    return list;
+  }, [activePerson, t]);
+
+  // 2. Determine initial zone
+  const initialZoneId = useMemo(() => {
+    if (existingTrip) {
+      const isSchengen = isSchengenCountry(existingTrip.entryCountry) ||
+        isSchengenCountry(existingTrip.exitCountry) ||
+        Boolean(existingTrip.segments && existingTrip.segments.some(s => isSchengenCountry(s.country)));
+
+      if (isSchengen) return 'schengen';
+      const c = getCountryCode(existingTrip.entryCountry || existingTrip.exitCountry);
+      if (c && availableZones.some(z => z.id === c)) return c;
+      return c || 'schengen';
+    }
+
+    if (route.params?.trackingMode === 'SINGLE_COUNTRY' && route.params?.targetCountry) {
+      const c = getCountryCode(route.params.targetCountry);
+      if (availableZones.some(z => z.id === c)) return c;
+    }
+    if (route.params?.trackingMode === 'SCHENGEN') {
+      return 'schengen';
+    }
+
+    return availableZones[0]?.id || 'schengen';
+  }, [existingTrip, route.params, availableZones]);
+
+  const [selectedZoneId, setSelectedZoneId] = useState<string>(initialZoneId);
+
+  // Selected Zone Details
+  const selectedZone = useMemo(() => {
+    return availableZones.find(z => z.id === selectedZoneId) || availableZones[0] || {
+      id: 'schengen',
+      name: '🇪🇺 Schengen Zone',
+      trackingMode: 'SCHENGEN' as TrackingMode,
+    };
+  }, [availableZones, selectedZoneId]);
+
+  const isSingleCountryMode = selectedZone.trackingMode === 'SINGLE_COUNTRY' && Boolean(selectedZone.targetCountry || selectedZone.id);
+  const targetCountry = isSingleCountryMode ? getCountryCode(selectedZone.targetCountry || selectedZone.id) : '';
+
+  // Retrieve matching visa details
+  const relevantVisaDetails = useMemo(() => {
+    if (isSingleCountryMode && targetCountry) {
+      return activePerson?.zoneVisaDetails?.[targetCountry] || 
+        (activePerson?.visaDetails?.targetCountry === targetCountry ? activePerson?.visaDetails : null);
+    }
+    return activePerson?.zoneVisaDetails?.['schengen'] || 
+      (activePerson?.visaDetails?.trackingMode !== 'SINGLE_COUNTRY' ? activePerson?.visaDetails : null);
+  }, [activePerson, isSingleCountryMode, targetCountry]);
 
   const initialStart = route.params?.startDate ? parseISO(route.params.startDate) : (existingTrip ? parseISO(existingTrip.entryDate) : new Date());
   const initialEnd = route.params?.endDate ? parseISO(route.params.endDate) : (existingTrip ? parseISO(existingTrip.exitDate) : new Date());
@@ -59,23 +143,35 @@ export const AddTripScreen = () => {
   const [showEntryPicker, setShowEntryPicker] = useState(false);
   const [showExitPicker, setShowExitPicker] = useState(false);
   
-  // For Schengen mode: default to Schengen country list; For Single Country mode: fixed to targetCountry
-  const defaultSchengenCountry = existingTrip?.entryCountry ? getCountryCode(existingTrip.entryCountry) : SCHENGEN_ONLY_COUNTRIES[0];
-
-  const [entryCountry, setEntryCountry] = useState(isSingleCountryMode ? targetCountry : defaultSchengenCountry);
-  const [exitCountry, setExitCountry] = useState(isSingleCountryMode ? targetCountry : defaultSchengenCountry);
+  const [entryCountry, setEntryCountry] = useState<string>(() => {
+    if (existingTrip?.entryCountry) return getCountryCode(existingTrip.entryCountry);
+    return isSingleCountryMode ? targetCountry : SCHENGEN_ONLY_COUNTRIES[0];
+  });
+  const [exitCountry, setExitCountry] = useState<string>(() => {
+    if (existingTrip?.exitCountry) return getCountryCode(existingTrip.exitCountry);
+    return isSingleCountryMode ? targetCountry : SCHENGEN_ONLY_COUNTRIES[0];
+  });
 
   const [segments, setSegments] = useState<TripSegment[]>(existingTrip?.segments || []);
   const [selectedPersonIds, setSelectedPersonIds] = useState<string[]>([activePersonId || '']);
 
-  useEffect(() => {
-    if (isSingleCountryMode) {
-      setEntryCountry(targetCountry);
-      setExitCountry(targetCountry);
+  // Handle zone selection change
+  const handleSelectZone = (zoneId: string) => {
+    setSelectedZoneId(zoneId);
+    const targetZone = availableZones.find(z => z.id === zoneId);
+    if (targetZone?.trackingMode === 'SINGLE_COUNTRY') {
+      const c = getCountryCode(targetZone.targetCountry || targetZone.id);
+      setEntryCountry(c);
+      setExitCountry(c);
+    } else {
+      if (!isSchengenCountry(entryCountry)) {
+        setEntryCountry(SCHENGEN_ONLY_COUNTRIES[0]);
+      }
+      if (!isSchengenCountry(exitCountry)) {
+        setExitCountry(SCHENGEN_ONLY_COUNTRIES[0]);
+      }
     }
-  }, [isSingleCountryMode, targetCountry]);
-
-
+  };
 
   const onEntryChange = (event: any, selectedDate?: Date) => {
     setShowEntryPicker(false);
@@ -101,14 +197,14 @@ export const AddTripScreen = () => {
     const finalEntryDate = formatLocal(entryDate);
     const finalExitDate = isOngoing ? finalEntryDate : formatLocal(exitDate);
 
-    // Validate using utility
+    // Validate using utility and relevant visa details
     const val = validateTripForm({
-      isVisaExempt: visaDetails?.isVisaExempt || false,
+      isVisaExempt: relevantVisaDetails?.isVisaExempt || false,
       isOngoing,
       tripEntryDate: finalEntryDate,
       tripExitDate: finalExitDate,
-      visaStartDate: visaDetails?.validFrom,
-      visaEndDate: visaDetails?.validUntil,
+      visaStartDate: relevantVisaDetails?.validFrom,
+      visaEndDate: relevantVisaDetails?.validUntil,
     });
 
     if (!val.isValid) {
@@ -164,6 +260,30 @@ export const AddTripScreen = () => {
 
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={dynamicStyles.scroll}>
+
+          {/* VISA / TRACKING ZONE SELECTOR */}
+          <View style={dynamicStyles.zoneSelectContainer}>
+            <Text style={dynamicStyles.label}>
+              🛂 {t('visaSettings.zoneSelectorTitle') || 'VİZE / TAKİP BÖLGESİ'}
+            </Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={dynamicStyles.zonePillsScroll}>
+              {availableZones.map(zone => {
+                const isActive = selectedZoneId === zone.id;
+                return (
+                  <TouchableOpacity
+                    key={zone.id}
+                    style={[dynamicStyles.zonePill, isActive && dynamicStyles.zonePillActive]}
+                    onPress={() => handleSelectZone(zone.id)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[dynamicStyles.zonePillText, isActive && dynamicStyles.zonePillTextActive]}>
+                      {zone.name}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </View>
 
           {/* ONGOING SWITCH */}
           <View style={dynamicStyles.ongoingContainer}>
@@ -275,7 +395,7 @@ export const AddTripScreen = () => {
             <View style={dynamicStyles.singleCountryBanner}>
               <Text style={dynamicStyles.singleCountryBannerTitle}>📍 Hedef Ülke / Target Country</Text>
               <Text style={dynamicStyles.singleCountryBannerValue}>
-                {t(`countries.${targetCountry}`, { defaultValue: targetCountry })} ({visaDetails?.maxDays || 90}/180 Rule)
+                {t(`countries.${targetCountry}`, { defaultValue: targetCountry })} ({relevantVisaDetails?.maxDays || 90}/180 Rule)
               </Text>
             </View>
           ) : (
@@ -354,6 +474,34 @@ const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
   title: { fontSize: 18, fontWeight: '800', color: colors.text },
   placeholder: { width: 60 },
   scroll: { padding: 24, paddingBottom: 60 },
+  zoneSelectContainer: {
+    marginBottom: 20,
+  },
+  zonePillsScroll: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingVertical: 4,
+  },
+  zonePill: {
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  zonePillActive: {
+    backgroundColor: colors.bauhausBlue,
+    borderColor: colors.bauhausBlue,
+  },
+  zonePillText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.textSecondary,
+  },
+  zonePillTextActive: {
+    color: colors.white,
+  },
   ongoingContainer: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: colors.surface, padding: 16, borderRadius: 12, marginBottom: 24, borderWidth: 1, borderColor: colors.border },
   ongoingTitle: { fontSize: 16, fontWeight: '700', color: colors.text },
   ongoingDesc: { fontSize: 12, color: colors.textSecondary, marginTop: 4 },

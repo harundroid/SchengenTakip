@@ -7,7 +7,7 @@ import { useTripStore } from '../store/useTripStore';
 import { calculateDaysForTrip } from '../utils/rules';
 import { useTranslation } from 'react-i18next';
 import { useAppTheme } from '../theme/ThemeContext';
-import { isSchengenCountry, isSameCountry } from '../constants/countries';
+import { isSchengenCountry, isSameCountry, getCountryCode } from '../constants/countries';
 import { subDays } from 'date-fns';
 import { Trip } from '../types';
 
@@ -218,7 +218,20 @@ export const TripsListScreen = () => {
                 <Text style={dynamicStyles.closeBtnText}>Close</Text>
               </TouchableOpacity>
             )}
-            <TouchableOpacity onPress={() => navigation.navigate('AddTrip', { tripId: trip.id })} style={dynamicStyles.editBtn}>
+            <TouchableOpacity 
+              onPress={() => {
+                const tripMode = (isSchengenCountry(trip.entryCountry) || isSchengenCountry(trip.exitCountry))
+                  ? 'SCHENGEN'
+                  : 'SINGLE_COUNTRY';
+                const tripTarget = tripMode === 'SINGLE_COUNTRY' ? getCountryCode(trip.entryCountry || trip.exitCountry) : undefined;
+                navigation.navigate('AddTrip', { 
+                  tripId: trip.id,
+                  trackingMode: tripMode,
+                  targetCountry: tripTarget,
+                });
+              }} 
+              style={dynamicStyles.editBtn}
+            >
               <Text style={dynamicStyles.editBtnText}>✎</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={() => removeTrip(trip.id)} style={dynamicStyles.deleteBtn}>
@@ -281,7 +294,16 @@ export const TripsListScreen = () => {
       <ScrollView contentContainerStyle={dynamicStyles.scroll}>
         <TouchableOpacity
           style={dynamicStyles.addBtn}
-          onPress={() => navigation.navigate('AddTrip')}
+          onPress={() => {
+            const addTripMode = activeFilterId === 'all' || activeFilterId === 'schengen'
+              ? 'SCHENGEN'
+              : 'SINGLE_COUNTRY';
+            const addTripTarget = addTripMode === 'SINGLE_COUNTRY' ? activeFilterId : undefined;
+            navigation.navigate('AddTrip', {
+              trackingMode: addTripMode,
+              targetCountry: addTripTarget,
+            });
+          }}
         >
           <Text style={dynamicStyles.addBtnText}>{t('tripsList.addManually')}</Text>
         </TouchableOpacity>
