@@ -896,7 +896,7 @@ export const DashboardScreen = () => {
               <TouchableOpacity
                 style={dynamicStyles.githubBtn}
                 onPress={() => {
-                  Linking.openURL('https://github.com/daimac/SchengenTakip').catch(() => {});
+                  Linking.openURL('https://github.com/harundroid/SchengenTakip').catch(() => {});
                 }}
               >
                 <Text style={dynamicStyles.githubBtnText}>
