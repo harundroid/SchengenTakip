@@ -1,56 +1,113 @@
-# Welcome to your Expo app 👋
+# ✈️ Visa & Schengen Rule Tracker
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+A modern, privacy-first mobile application built with **React Native** and **Expo** to track Schengen 90/180-day visa rules, multi-zone travel allowances, and visa expiration alerts across multiple user profiles.
 
-## Get started
+---
 
-1. Install dependencies
+## 🔒 100% Privacy First & Zero Data Collection
 
+> **Your data belongs exclusively to you.** 
+
+- **Zero Remote Storage / Zero Tracking:** We do **NOT** collect, track, transmit, or store any personal data, trip dates, entry/exit logs, passport numbers, or location history on external servers.
+- **100% Local Storage:** All profile information and travel logs remain securely stored **on your device** using local state persistence.
+- **Offline P2P Sync:** Device synchronization operates entirely offline via direct Peer-to-Peer (P2P) QR code scanning—no cloud databases, backend accounts, or user registrations required.
+
+---
+
+## ✨ Key Features
+
+### 📅 Automatic 90/180 Rule Engine
+- **Sliding 180-Day Window Calculation:** Calculates exact days spent in the Schengen area over any sliding 180-day reference period.
+- **Visa Expiration & Remaining Days Locking:** Automatically caps allowed stay according to your visa's validity date (`validUntil`). Locks remaining days to `0` once the visa expires.
+- **Next Available Travel Date:** Computes when and how many days will free up for your next trip.
+
+### 🌐 Multi-Zone & Custom Tracking
+- **Schengen Zone Tracking:** Built-in automatic calculation for all 29 Schengen member countries.
+- **Custom Non-Schengen Zones:** Create dedicated tracking zones for specific countries (e.g., Bulgaria, UK, Cyprus, USA) with custom maximum allowed days.
+
+### 👥 Multi-Profile Management
+- Manage multiple family members or travel companions under a single app instance.
+- Track individual visa validity dates, custom zones, and ongoing/past trips per profile.
+
+### 🔔 Visa Expiration Alerts & Local Notifications
+- **Status Banners:** Clear visual warning cards on the dashboard when your visa is expiring soon or expired.
+- **Local Push Notifications:** Automated local notifications alert you 20 days prior to visa expiration without external network calls.
+
+### 🎨 Modern Bauhaus UI & Multi-Language Support
+- **Clean Bauhaus Aesthetics:** Styled with a curated palette supporting **Light**, **Dark**, and **System** theme modes.
+- **Localized Display & Content:** Native support for 5 languages:
+  - 🇹🇷 Turkish (*Schengen Takip*)
+  - 🇬🇧 English (*Visa Rule Tracker*)
+  - 🇧🇬 Bulgarian (*Виза Тракер*)
+  - 🇬🇷 Greek (*Visa Rule Tracker*)
+  - 🇲🇰 Macedonian (*Виза Тракер*)
+
+---
+
+## 🛠️ Technology Stack
+
+- **Framework:** React Native, Expo (SDK 57)
+- **Language:** TypeScript
+- **State Management:** Zustand with local persistence
+- **Localization:** `i18next`, `react-i18next`, `expo-localization`
+- **UI & Components:** React Native Calendars, React Navigation v6, Lucide Icons
+- **Monetization:** Google Mobile Ads (`react-native-google-mobile-ads`) with `__DEV__` test guard
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+- Node.js (v18 or higher)
+- npm / yarn / pnpm
+- Expo CLI (`npx expo`)
+- Android Studio (for Android builds) or Xcode (for iOS builds)
+
+### Installation
+
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/daimac/SchengenTakip.git
+   cd SchengenTakip/SchengenApp
+   ```
+
+2. **Install dependencies:**
    ```bash
    npm install
    ```
 
-2. Start the app
-
-   ```bash
-   npx expo start
+3. **Environment Setup:**
+   Create a `.env` file in the root directory (refer to `.env.example` for required variables):
+   ```env
+   ADMOB_ANDROID_APP_ID=ca-app-pub-XXXXXXXXXXXXXXXX~XXXXXXXXXX
+   ADMOB_IOS_APP_ID=ca-app-pub-XXXXXXXXXXXXXXXX~XXXXXXXXXX
+   EXPO_PUBLIC_ADMOB_BANNER_ANDROID=ca-app-pub-XXXXXXXXXXXXXXXX/XXXXXXXXXX
+   EXPO_PUBLIC_ADMOB_BANNER_IOS=ca-app-pub-XXXXXXXXXXXXXXXX/XXXXXXXXXX
+   EXPO_PUBLIC_ADMOB_INTERSTITIAL_ANDROID=ca-app-pub-XXXXXXXXXXXXXXXX/XXXXXXXXXX
+   EXPO_PUBLIC_ADMOB_INTERSTITIAL_IOS=ca-app-pub-XXXXXXXXXXXXXXXX/XXXXXXXXXX
    ```
 
-In the output, you'll find options to open the app in a
+4. **Run the application:**
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+   - **Android Development:**
+     ```bash
+     npx expo run:android
+     ```
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+   - **iOS Development:**
+     ```bash
+     npx expo run:ios
+     ```
 
-## Get a fresh project
+   - **Production Release Build (Android):**
+     ```bash
+     export JAVA_HOME="/opt/homebrew/opt/openjdk@17"
+     export ANDROID_HOME="$HOME/Library/Android/sdk"
+     ./android/gradlew -p android assembleRelease
+     ```
 
-When you're ready, run:
+---
 
-```bash
-npm run reset-project
-```
+## 📄 License
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
-
-### Other setup steps
-
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
-
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+Copyright © 2026. All rights reserved.
