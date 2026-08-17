@@ -7,7 +7,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { parseISO } from 'date-fns';
 import { useTripStore } from '../store/useTripStore';
 import { useTranslation } from 'react-i18next';
-import { ALL_COUNTRIES, SCHENGEN_ONLY_COUNTRIES, NON_SCHENGEN_COUNTRIES, getCountryCode } from '../constants/countries';
+import { ALL_COUNTRIES, SCHENGEN_ONLY_COUNTRIES, NON_SCHENGEN_COUNTRIES, getCountryCode, isSchengenCountry } from '../constants/countries';
 import { TrackingMode, VisaDetails, VisaZoneConfig } from '../types';
 import { AdBanner } from '../components/AdBanner';
 import { useAppTheme } from '../theme/ThemeContext';
@@ -104,7 +104,7 @@ export const VisaSettingsScreen = () => {
       setIsVisaExempt(savedDetails.isVisaExempt || false);
       setTrackingMode(savedDetails.trackingMode || (isSchengenZonePill ? 'SCHENGEN' : 'SINGLE_COUNTRY'));
       setTargetCountry(savedDetails.targetCountry || targetZone?.defaultTarget || 'MK');
-      setCountry(savedDetails.country || SCHENGEN_ONLY_COUNTRIES[0]);
+      setCountry((isSchengenZonePill && (!savedDetails.country || !isSchengenCountry(savedDetails.country))) ? SCHENGEN_ONLY_COUNTRIES[0] : (savedDetails.country || SCHENGEN_ONLY_COUNTRIES[0]));
       setValidFromDate(savedDetails.validFrom ? parseISO(savedDetails.validFrom) : new Date());
       setValidUntilDate(savedDetails.validUntil ? parseISO(savedDetails.validUntil) : new Date());
       setMaxDays(savedDetails.maxDays?.toString() || '90');
@@ -221,10 +221,15 @@ export const VisaSettingsScreen = () => {
   };
 
   const handleSave = () => {
+    const isSchengen = selectedZoneId === 'schengen' || trackingMode === 'SCHENGEN';
+    const effectiveCountry = isSchengen 
+      ? (country && isSchengenCountry(country) ? country : SCHENGEN_ONLY_COUNTRIES[0]) 
+      : (targetCountry || selectedZoneId);
+
     const details: VisaDetails = {
-      trackingMode,
-      targetCountry: trackingMode === 'SINGLE_COUNTRY' ? targetCountry : undefined,
-      country: trackingMode === 'SCHENGEN' ? country : targetCountry,
+      trackingMode: isSchengen ? 'SCHENGEN' : 'SINGLE_COUNTRY',
+      targetCountry: !isSchengen ? (targetCountry || selectedZoneId) : undefined,
+      country: effectiveCountry,
       validFrom: isVisaExempt ? '2000-01-01' : formatLocal(validFromDate),
       validUntil: isVisaExempt ? '2099-12-31' : formatLocal(validUntilDate),
       maxDays: parseInt(maxDays, 10) || 90,

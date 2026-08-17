@@ -133,7 +133,10 @@ export const useTripStore = create<TripState>()(
           persons: state.persons.map(p => {
             if (p.id === state.activePersonId) {
               const zoneVisaDetails = { ...(p.zoneVisaDetails || {}), [zoneId]: details };
-              return { ...p, visaDetails: details, zoneVisaDetails };
+              // Only update root visaDetails if this is specifically the Schengen zone or Schengen tracking mode
+              const isSchengen = zoneId === 'schengen' || details.trackingMode === 'SCHENGEN';
+              const updatedRootVisaDetails = isSchengen ? details : (p.visaDetails?.trackingMode !== 'SINGLE_COUNTRY' ? p.visaDetails : null);
+              return { ...p, visaDetails: updatedRootVisaDetails, zoneVisaDetails };
             }
             return p;
           })

@@ -275,7 +275,9 @@ export const calculate90180Rule = (
 };
 
 export const calculateMainDestination = (trips: Trip[], visaCountry: string, validFrom?: string) => {
-  if (!visaCountry || trips.length === 0) return { isValid: true, stats: {} as Record<string, number>, visaCountryDays: 0, maxDays: 0 };
+  if (!visaCountry || !isSchengenCountry(visaCountry) || trips.length === 0) {
+    return { isValid: true, stats: {} as Record<string, number>, visaCountryDays: 0, maxDays: 0 };
+  }
 
   // Sadece mevcut vize süresine (validFrom sonrası) ait seyahatleri ana hedef ülke hesabına dahil et
   const currentVisaTrips = validFrom

@@ -178,19 +178,43 @@ export const DashboardScreen = () => {
     trackingMode: 'SCHENGEN' as TrackingMode,
   };
 
+  // Specifically retrieve Schengen visa details without being polluted by non-Schengen custom visas
+  const schengenVisaDetails = useMemo(() => {
+    const fromZone = activePerson?.zoneVisaDetails?.['schengen'];
+    if (fromZone && (!fromZone.country || isSchengenCountry(fromZone.country))) return fromZone;
+    if (activePerson?.visaDetails && activePerson.visaDetails.trackingMode !== 'SINGLE_COUNTRY' && isSchengenCountry(activePerson.visaDetails.country)) {
+      return activePerson.visaDetails;
+    }
+    return null;
+  }, [activePerson]);
+
   // Dynamic visaDetails passed to rule calculation engine
   const activeVisaConfig = useMemo(() => {
-    const zoneVisa = activePerson?.zoneVisaDetails?.[currentZone.id] || visaDetails;
-    return {
-      trackingMode: currentZone.trackingMode,
-      targetCountry: currentZone.targetCountry || zoneVisa?.targetCountry,
-      country: zoneVisa?.country || 'Germany',
-      validFrom: zoneVisa?.validFrom || '',
-      validUntil: zoneVisa?.validUntil || '',
-      maxDays: zoneVisa?.maxDays || 90,
-      isVisaExempt: zoneVisa?.isVisaExempt || false,
-    };
-  }, [currentZone, activePerson, visaDetails]);
+    if (currentZone.trackingMode === 'SCHENGEN') {
+      const zoneVisa = activePerson?.zoneVisaDetails?.['schengen'] || schengenVisaDetails;
+      return {
+        trackingMode: 'SCHENGEN' as TrackingMode,
+        targetCountry: undefined,
+        country: (zoneVisa?.country && isSchengenCountry(zoneVisa.country)) ? zoneVisa.country : 'Germany',
+        validFrom: zoneVisa?.validFrom || '',
+        validUntil: zoneVisa?.validUntil || '',
+        maxDays: zoneVisa?.maxDays || 90,
+        isVisaExempt: zoneVisa?.isVisaExempt || false,
+      };
+    } else {
+      const targetC = currentZone.targetCountry || currentZone.id;
+      const zoneVisa = activePerson?.zoneVisaDetails?.[currentZone.id] || activePerson?.zoneVisaDetails?.[targetC];
+      return {
+        trackingMode: 'SINGLE_COUNTRY' as TrackingMode,
+        targetCountry: targetC,
+        country: targetC,
+        validFrom: zoneVisa?.validFrom || '',
+        validUntil: zoneVisa?.validUntil || '',
+        maxDays: zoneVisa?.maxDays || 90,
+        isVisaExempt: zoneVisa?.isVisaExempt || false,
+      };
+    }
+  }, [currentZone, activePerson, schengenVisaDetails]);
 
   // Filter trips strictly for current active zone using multi-language country normalizers
   const zoneFilteredTrips = useMemo(() => {
@@ -222,8 +246,8 @@ export const DashboardScreen = () => {
   const rule90180 = calculate90180Rule(zoneFilteredTrips, activeVisaConfig);
   const mainDestination = calculateMainDestination(
     zoneFilteredTrips,
-    visaDetails?.country || '',
-    activeVisaConfig?.isVisaExempt ? undefined : activeVisaConfig?.validFrom
+    (schengenVisaDetails?.country && isSchengenCountry(schengenVisaDetails.country)) ? schengenVisaDetails.country : '',
+    schengenVisaDetails?.isVisaExempt ? undefined : schengenVisaDetails?.validFrom
   );
 
   // Trigger local push notification when visa is expiring soon (within 20 days)
@@ -713,10 +737,10 @@ export const DashboardScreen = () => {
 
         {/* ROW 2: Visa Destination (For Schengen Zone) */}
         {currentZone.trackingMode === 'SCHENGEN' && (
-          visaDetails?.country && trips.length > 0 ? (
+          (schengenVisaDetails?.country && isSchengenCountry(schengenVisaDetails.country) && !schengenVisaDetails.isVisaExempt && trips.length > 0) ? (
             <View style={[dynamicStyles.thinCard, !mainDestination.isValid && { borderColor: colors.warning, borderWidth: 2 }]}>
               <Text style={dynamicStyles.thinCardLabel}>
-                {t('dashboard.visaDest')} ({t(`countries.${visaDetails.country}`, { defaultValue: visaDetails.country })})
+                {t('dashboard.visaDest')} ({t(`countries.${schengenVisaDetails.country}`, { defaultValue: schengenVisaDetails.country })})
               </Text>
               <View style={dynamicStyles.thinCardRight}>
                 <Text style={[dynamicStyles.thinCardNumber, { color: colors.bauhausBlue }]}>
@@ -726,14 +750,13 @@ export const DashboardScreen = () => {
               </View>
             </View>
           ) : (
-            (!visaDetails || !visaDetails.country) && (
+            (!schengenVisaDetails || !schengenVisaDetails.country || !isSchengenCountry(schengenVisaDetails.country)) && !schengenVisaDetails?.isVisaExempt && (
               <TouchableOpacity
                 style={[dynamicStyles.thinCard, dynamicStyles.missingVisaCard]}
                 onPress={() => navigation.navigate('VisaSettings', {
-                  zoneId: currentZone.id,
-                  zoneName: currentZone.name,
-                  trackingMode: currentZone.trackingMode,
-                  targetCountry: currentZone.targetCountry,
+                  zoneId: 'schengen',
+                  zoneName: '🇪🇺 Schengen Zone',
+                  trackingMode: 'SCHENGEN',
                 })}
               >
                 <Text style={dynamicStyles.missingVisaText}>{t('dashboard.visaSettings')} ➔</Text>
