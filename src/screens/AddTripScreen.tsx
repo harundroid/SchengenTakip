@@ -15,7 +15,21 @@ import { useAppTheme } from '../theme/ThemeContext';
 import { validateTripForm } from '../utils/validation';
 import { SCHENGEN_ONLY_COUNTRIES, getCountryCode, isSchengenCountry } from '../constants/countries';
 
-const formatLocal = (date: Date) => {
+const safeParseDate = (d?: string | Date | null): Date => {
+  if (!d) return new Date();
+  if (d instanceof Date) return isNaN(d.getTime()) ? new Date() : d;
+  try {
+    const parsed = parseISO(d);
+    return isNaN(parsed.getTime()) ? new Date() : parsed;
+  } catch {
+    return new Date();
+  }
+};
+
+const formatLocal = (date?: Date | null) => {
+  if (!date || isNaN(date.getTime())) {
+    date = new Date();
+  }
   const yyyy = date.getFullYear();
   const mm = String(date.getMonth() + 1).padStart(2, '0');
   const dd = String(date.getDate()).padStart(2, '0');
@@ -134,8 +148,8 @@ export const AddTripScreen = () => {
       (activePerson?.visaDetails?.trackingMode !== 'SINGLE_COUNTRY' ? activePerson?.visaDetails : null);
   }, [activePerson, isSingleCountryMode, targetCountry]);
 
-  const initialStart = route.params?.startDate ? parseISO(route.params.startDate) : (existingTrip ? parseISO(existingTrip.entryDate) : new Date());
-  const initialEnd = route.params?.endDate ? parseISO(route.params.endDate) : (existingTrip ? parseISO(existingTrip.exitDate) : new Date());
+  const initialStart = safeParseDate(route.params?.startDate || existingTrip?.entryDate);
+  const initialEnd = safeParseDate(route.params?.endDate || existingTrip?.exitDate);
 
   const [isOngoing, setIsOngoing] = useState(existingTrip?.isOngoing || false);
   const [entryDate, setEntryDate] = useState<Date>(initialStart);
@@ -157,30 +171,34 @@ export const AddTripScreen = () => {
 
   // Handle zone selection change
   const handleSelectZone = (zoneId: string) => {
-    setSelectedZoneId(zoneId);
-    const targetZone = availableZones.find(z => z.id === zoneId);
-    if (targetZone?.trackingMode === 'SINGLE_COUNTRY') {
-      const c = getCountryCode(targetZone.targetCountry || targetZone.id);
-      setEntryCountry(c);
-      setExitCountry(c);
-    } else {
-      if (!isSchengenCountry(entryCountry)) {
-        setEntryCountry(SCHENGEN_ONLY_COUNTRIES[0]);
+    try {
+      setSelectedZoneId(zoneId);
+      const targetZone = availableZones.find(z => z.id === zoneId);
+      if (targetZone?.trackingMode === 'SINGLE_COUNTRY') {
+        const c = getCountryCode(targetZone.targetCountry || targetZone.id);
+        setEntryCountry(c);
+        setExitCountry(c);
+      } else {
+        if (!isSchengenCountry(entryCountry)) {
+          setEntryCountry(SCHENGEN_ONLY_COUNTRIES[0]);
+        }
+        if (!isSchengenCountry(exitCountry)) {
+          setExitCountry(SCHENGEN_ONLY_COUNTRIES[0]);
+        }
       }
-      if (!isSchengenCountry(exitCountry)) {
-        setExitCountry(SCHENGEN_ONLY_COUNTRIES[0]);
-      }
+    } catch (e) {
+      console.warn('handleSelectZone error:', e);
     }
   };
 
   const onEntryChange = (event: any, selectedDate?: Date) => {
     setShowEntryPicker(false);
-    if (selectedDate) setEntryDate(selectedDate);
+    if (selectedDate && !isNaN(selectedDate.getTime())) setEntryDate(selectedDate);
   };
 
   const onExitChange = (event: any, selectedDate?: Date) => {
     setShowExitPicker(false);
-    if (selectedDate) setExitDate(selectedDate);
+    if (selectedDate && !isNaN(selectedDate.getTime())) setExitDate(selectedDate);
   };
 
   const togglePersonSelection = (personId: string) => {
@@ -194,45 +212,50 @@ export const AddTripScreen = () => {
   };
 
   const handleSave = () => {
-    const finalEntryDate = formatLocal(entryDate);
-    const finalExitDate = isOngoing ? finalEntryDate : formatLocal(exitDate);
+    try {
+      const finalEntryDate = formatLocal(entryDate);
+      const finalExitDate = isOngoing ? finalEntryDate : formatLocal(exitDate);
 
-    // Validate using utility and relevant visa details
-    const val = validateTripForm({
-      isVisaExempt: relevantVisaDetails?.isVisaExempt || false,
-      isOngoing,
-      tripEntryDate: finalEntryDate,
-      tripExitDate: finalExitDate,
-      visaStartDate: relevantVisaDetails?.validFrom,
-      visaEndDate: relevantVisaDetails?.validUntil,
-    });
+      // Validate using utility and relevant visa details
+      const val = validateTripForm({
+        isVisaExempt: relevantVisaDetails?.isVisaExempt || false,
+        isOngoing,
+        tripEntryDate: finalEntryDate,
+        tripExitDate: finalExitDate,
+        visaStartDate: relevantVisaDetails?.validFrom,
+        visaEndDate: relevantVisaDetails?.validUntil,
+      });
 
-    if (!val.isValid) {
-      const errorMsg = Object.values(val.errors).filter(Boolean).join('\n');
-      Alert.alert(t('common.error'), errorMsg || 'Geçersiz seyahat verisi');
-      return;
+      if (!val.isValid) {
+        const errorMsg = Object.values(val.errors).filter(Boolean).join('\n');
+        Alert.alert(t('common.error'), errorMsg || 'Geçersiz seyahat verisi');
+        return;
+      }
+
+      const tripData = {
+        id: existingTrip ? existingTrip.id : Math.random().toString(36).substring(2, 9),
+        entryCountry,
+        exitCountry: isOngoing ? entryCountry : exitCountry,
+        entryDate: finalEntryDate,
+        exitDate: finalExitDate,
+        isOngoing,
+        segments: segments.length > 0 ? segments : undefined,
+      };
+
+      if (existingTrip) {
+        updateTripStore(existingTrip.id, tripData);
+      } else if (selectedPersonIds.length > 1) {
+        addTripToMultiple(tripData, selectedPersonIds);
+      } else {
+        addTrip(tripData);
+      }
+
+      showCompletedFlowInterstitial();
+      navigation.goBack();
+    } catch (e) {
+      console.error('handleSave trip error:', e);
+      Alert.alert(t('common.error'), 'Seyahat kaydedilirken bir hata oluştu.');
     }
-
-    const tripData = {
-      id: existingTrip ? existingTrip.id : Math.random().toString(36).substring(2, 9),
-      entryCountry,
-      exitCountry: isOngoing ? entryCountry : exitCountry,
-      entryDate: finalEntryDate,
-      exitDate: finalExitDate,
-      isOngoing,
-      segments: segments.length > 0 ? segments : undefined,
-    };
-
-    if (existingTrip) {
-      updateTripStore(existingTrip.id, tripData);
-    } else if (selectedPersonIds.length > 1) {
-      addTripToMultiple(tripData, selectedPersonIds);
-    } else {
-      addTrip(tripData);
-    }
-
-    showCompletedFlowInterstitial();
-    navigation.goBack();
   };
 
   const dynamicStyles = getStyles(colors, isDark);

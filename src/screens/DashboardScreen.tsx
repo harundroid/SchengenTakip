@@ -68,17 +68,28 @@ export interface SubZone {
   targetCountry?: string;
 }
 
-const getDatesRangeArray = (startDateStr: string, endDateStr: string): string[] => {
+const getDatesRangeArray = (startDateStr?: string, endDateStr?: string): string[] => {
   try {
+    if (!startDateStr || !endDateStr) return [];
     const dates: string[] = [];
     const [y1, m1, d1] = startDateStr.split('-').map(Number);
     const [y2, m2, d2] = endDateStr.split('-').map(Number);
 
+    if (isNaN(y1) || isNaN(m1) || isNaN(d1) || isNaN(y2) || isNaN(m2) || isNaN(d2)) {
+      return [startDateStr];
+    }
+
     const start = new Date(Date.UTC(y1, m1 - 1, d1));
     const end = new Date(Date.UTC(y2, m2 - 1, d2));
 
+    if (isNaN(start.getTime()) || isNaN(end.getTime()) || start > end) {
+      return [startDateStr];
+    }
+
     const curr = new Date(start);
-    while (curr <= end) {
+    let count = 0;
+    while (curr <= end && count < 1000) {
+      count++;
       const yyyy = curr.getUTCFullYear();
       const mm = String(curr.getUTCMonth() + 1).padStart(2, '0');
       const dd = String(curr.getUTCDate()).padStart(2, '0');
@@ -87,11 +98,14 @@ const getDatesRangeArray = (startDateStr: string, endDateStr: string): string[] 
     }
     return dates;
   } catch {
-    return [startDateStr];
+    return [startDateStr || ''];
   }
 };
 
-const formatLocalISO = (date: Date) => {
+const formatLocalISO = (date?: Date | null) => {
+  if (!date || isNaN(date.getTime())) {
+    date = new Date();
+  }
   const yyyy = date.getFullYear();
   const mm = String(date.getMonth() + 1).padStart(2, '0');
   const dd = String(date.getDate()).padStart(2, '0');
@@ -306,52 +320,61 @@ export const DashboardScreen = () => {
   };
 
   const handleAddCustomZone = () => {
-    if (selectedNewCountry === 'schengen') {
-      const existing = customZones.find(z => z.id === 'schengen');
-      if (existing) {
+    try {
+      if (selectedNewCountry === 'schengen') {
+        const existing = customZones.find(z => z && z.id === 'schengen');
+        if (existing) {
+          setActiveZoneId('schengen');
+          setIsAddZoneModalOpen(false);
+          return;
+        }
+        const newZone: SubZone = {
+          id: 'schengen',
+          name: '🇪🇺 Schengen Zone',
+          trackingMode: 'SCHENGEN',
+        };
+        const nextZones = [newZone, ...customZones.filter(Boolean)];
+        setCustomZones(nextZones);
+        if (activePerson?.id) {
+          updatePersonZones(activePerson.id, nextZones as any);
+        }
         setActiveZoneId('schengen');
         setIsAddZoneModalOpen(false);
         return;
       }
+
+      const code = getCountryCode(selectedNewCountry);
+      if (!code) {
+        setIsAddZoneModalOpen(false);
+        return;
+      }
+
+      const zoneId = code.toLowerCase();
+      const existing = customZones.find(z => z && (z.id === zoneId || (z.targetCountry && isSameCountry(z.targetCountry, code))));
+      if (existing) {
+        setActiveZoneId(existing.id);
+        setIsAddZoneModalOpen(false);
+        return;
+      }
+
       const newZone: SubZone = {
-        id: 'schengen',
-        name: '🇪🇺 Schengen Zone',
-        trackingMode: 'SCHENGEN',
+        id: zoneId,
+        name: `🌐 ${t(`countries.${code}`, { defaultValue: code })}`,
+        trackingMode: 'SINGLE_COUNTRY',
+        targetCountry: code,
       };
-      const nextZones = [newZone, ...customZones];
+
+      const nextZones = [...customZones.filter(Boolean), newZone];
       setCustomZones(nextZones);
       if (activePerson?.id) {
         updatePersonZones(activePerson.id, nextZones as any);
       }
-      setActiveZoneId('schengen');
+      setActiveZoneId(newZone.id);
       setIsAddZoneModalOpen(false);
-      return;
-    }
-
-    const code = getCountryCode(selectedNewCountry);
-    if (!code) return;
-
-    const existing = customZones.find(z => z.targetCountry && isSameCountry(z.targetCountry, code));
-    if (existing) {
-      setActiveZoneId(existing.id);
+    } catch (e) {
+      console.warn('handleAddCustomZone error:', e);
       setIsAddZoneModalOpen(false);
-      return;
     }
-
-    const newZone: SubZone = {
-      id: code.toLowerCase(),
-      name: `🌐 ${t(`countries.${code}`, { defaultValue: code })}`,
-      trackingMode: 'SINGLE_COUNTRY',
-      targetCountry: code,
-    };
-
-    const nextZones = [...customZones, newZone];
-    setCustomZones(nextZones);
-    if (activePerson?.id) {
-      updatePersonZones(activePerson.id, nextZones as any);
-    }
-    setActiveZoneId(newZone.id);
-    setIsAddZoneModalOpen(false);
   };
 
   const handleDeleteZone = (id: string, name: string) => {

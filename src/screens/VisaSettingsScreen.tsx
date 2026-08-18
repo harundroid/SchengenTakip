@@ -12,7 +12,21 @@ import { TrackingMode, VisaDetails, VisaZoneConfig } from '../types';
 import { AdBanner } from '../components/AdBanner';
 import { useAppTheme } from '../theme/ThemeContext';
 
-const formatLocal = (date: Date) => {
+const safeParseDate = (d?: string | Date | null): Date => {
+  if (!d) return new Date();
+  if (d instanceof Date) return isNaN(d.getTime()) ? new Date() : d;
+  try {
+    const parsed = parseISO(d);
+    return isNaN(parsed.getTime()) ? new Date() : parsed;
+  } catch {
+    return new Date();
+  }
+};
+
+const formatLocal = (date?: Date | null) => {
+  if (!date || isNaN(date.getTime())) {
+    date = new Date();
+  }
   const yyyy = date.getFullYear();
   const mm = String(date.getMonth() + 1).padStart(2, '0');
   const dd = String(date.getDate()).padStart(2, '0');
@@ -105,8 +119,8 @@ export const VisaSettingsScreen = () => {
       setTrackingMode(savedDetails.trackingMode || (isSchengenZonePill ? 'SCHENGEN' : 'SINGLE_COUNTRY'));
       setTargetCountry(savedDetails.targetCountry || targetZone?.defaultTarget || 'MK');
       setCountry((isSchengenZonePill && (!savedDetails.country || !isSchengenCountry(savedDetails.country))) ? SCHENGEN_ONLY_COUNTRIES[0] : (savedDetails.country || SCHENGEN_ONLY_COUNTRIES[0]));
-      setValidFromDate(savedDetails.validFrom ? parseISO(savedDetails.validFrom) : new Date());
-      setValidUntilDate(savedDetails.validUntil ? parseISO(savedDetails.validUntil) : new Date());
+      setValidFromDate(safeParseDate(savedDetails.validFrom));
+      setValidUntilDate(safeParseDate(savedDetails.validUntil));
       setMaxDays(savedDetails.maxDays?.toString() || '90');
     } else {
       // Clean state reset based strictly on active top zone pill
@@ -135,50 +149,59 @@ export const VisaSettingsScreen = () => {
   };
 
   const handleAddZoneFromPicker = () => {
-    if (selectedNewCountryZone === 'schengen') {
+    try {
+      if (selectedNewCountryZone === 'schengen') {
+        const newZone: VisaZoneConfig = {
+          id: 'schengen',
+          name: '🇪🇺 Schengen Zone',
+          trackingMode: 'SCHENGEN',
+          maxDays: 90,
+        };
+
+        if (activePerson?.id) {
+          const existingZones = activePerson.zones || [];
+          if (!existingZones.some(z => z.id === 'schengen')) {
+            updatePersonZones(activePerson.id, [newZone, ...existingZones]);
+          }
+        }
+
+        setSelectedZoneId('schengen');
+        setTrackingMode('SCHENGEN');
+        setShowAddZoneInput(false);
+        return;
+      }
+
+      const code = getCountryCode(selectedNewCountryZone);
+      if (!code) {
+        setShowAddZoneInput(false);
+        return;
+      }
+      const zoneId = code.toLowerCase();
+      
+      // Add to active person's zones list
       const newZone: VisaZoneConfig = {
-        id: 'schengen',
-        name: '🇪🇺 Schengen Zone',
-        trackingMode: 'SCHENGEN',
+        id: zoneId,
+        name: `🌐 ${t(`countries.${code}`, { defaultValue: code })}`,
+        trackingMode: 'SINGLE_COUNTRY',
+        targetCountry: code,
         maxDays: 90,
       };
 
       if (activePerson?.id) {
         const existingZones = activePerson.zones || [];
-        if (!existingZones.some(z => z.id === 'schengen')) {
-          updatePersonZones(activePerson.id, [newZone, ...existingZones]);
+        if (!existingZones.some(z => z.id === zoneId)) {
+          updatePersonZones(activePerson.id, [...existingZones, newZone]);
         }
       }
 
-      setSelectedZoneId('schengen');
-      setTrackingMode('SCHENGEN');
+      setSelectedZoneId(zoneId);
+      setTargetCountry(code);
+      setTrackingMode('SINGLE_COUNTRY');
       setShowAddZoneInput(false);
-      return;
+    } catch (e) {
+      console.warn('handleAddZoneFromPicker error:', e);
+      setShowAddZoneInput(false);
     }
-
-    const code = getCountryCode(selectedNewCountryZone);
-    const zoneId = code.toLowerCase();
-    
-    // Add to active person's zones list
-    const newZone: VisaZoneConfig = {
-      id: zoneId,
-      name: `🌐 ${t(`countries.${code}`, { defaultValue: code })}`,
-      trackingMode: 'SINGLE_COUNTRY',
-      targetCountry: code,
-      maxDays: 90,
-    };
-
-    if (activePerson?.id) {
-      const existingZones = activePerson.zones || [];
-      if (!existingZones.some(z => z.id === zoneId)) {
-        updatePersonZones(activePerson.id, [...existingZones, newZone]);
-      }
-    }
-
-    setSelectedZoneId(zoneId);
-    setTargetCountry(code);
-    setTrackingMode('SINGLE_COUNTRY');
-    setShowAddZoneInput(false);
   };
 
   const handleDeleteZoneDetails = (zId: string, zName: string) => {

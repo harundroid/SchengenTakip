@@ -2,8 +2,15 @@ import { differenceInDays, parseISO, isAfter, isBefore, isSameDay, subDays, addD
 import { Trip, VisaDetails } from '../types';
 import { isSchengenCountry, isSameCountry } from '../constants/countries';
 
-const parseMidnight = (d: string | Date): Date => {
-  return startOfDay(typeof d === 'string' ? parseISO(d) : d);
+export const parseMidnight = (d?: string | Date | null): Date => {
+  if (!d) return startOfDay(new Date());
+  if (d instanceof Date) return isNaN(d.getTime()) ? startOfDay(new Date()) : startOfDay(d);
+  try {
+    const parsed = parseISO(d);
+    return isNaN(parsed.getTime()) ? startOfDay(new Date()) : startOfDay(parsed);
+  } catch {
+    return startOfDay(new Date());
+  }
 };
 
 /**
