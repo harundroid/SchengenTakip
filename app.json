@@ -51,7 +51,14 @@
         "react-native-google-mobile-ads",
         {
           "androidAppId": "ca-app-pub-6682414535223145~1864483647",
-          "iosAppId": "ca-app-pub-6682414535223145~3177565318"
+          "iosAppId": "ca-app-pub-6682414535223145~3177565318",
+          "userTrackingUsageDescription": "Bu izin, size daha alakalı ve kişiselleştirilmiş reklamlar sunmak amacıyla kullanılacaktır. İzin vermezseniz genel reklamlar gösterilmeye devam edecektir."
+        }
+      ],
+      [
+        "expo-tracking-transparency",
+        {
+          "userTrackingPermission": "Bu izin, size daha alakalı ve kişiselleştirilmiş reklamlar sunmak amacıyla kullanılacaktır. İzin vermezseniz genel reklamlar gösterilmeye devam edecektir."
         }
       ]
     ],
