@@ -110,4 +110,8 @@ A modern, privacy-first mobile application built with **React Native** and **Exp
 
 ## 📄 License
 
-Copyright © 2026. All rights reserved.
+**This project is completely OPEN for non-commercial, educational, and personal use. However, it is STRICTLY PROHIBITED to use this source code for any commercial purposes.**
+
+As the original author, I retain all commercial rights to this software. You may not distribute, publish to any app stores, monetize via ads/subscriptions, or use this code within a commercial entity without explicit written permission.
+
+Licensed under the **PolyForm Noncommercial License 1.0.0**.
