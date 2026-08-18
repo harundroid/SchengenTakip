@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Schengen Rule Tracker - Support & Customer Service</title>
+  <meta name="description" content="Official customer support, FAQ, and contact information for Schengen Rule Tracker (Visa Rule Tracker).">
+  <style>
+    :root {
+      --bg-color: #0F172A;
+      --card-bg: #1E293B;
+      --text-main: #F8FAFC;
+      --text-muted: #94A3B8;
+      --primary: #3B82F6;
+      --primary-hover: #2563EB;
+      --gold: #F59E0B;
+      --border: rgba(255, 255, 255, 0.1);
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      line-height: 1.6;
+      padding: 0 20px;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 40px 0 80px;
+    }
+    header {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+    .logo-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 72px;
+      height: 72px;
+      background: linear-gradient(135deg, #1E3A8A, #3B82F6);
+      border-radius: 18px;
+      font-size: 36px;
+      margin-bottom: 16px;
+      box-shadow: 0 10px 25px rgba(59, 130, 246, 0.3);
+    }
+    h1 {
+      font-size: 28px;
+      font-weight: 800;
+      margin-bottom: 8px;
+      color: #FFFFFF;
+    }
+    .subtitle {
+      color: var(--text-muted);
+      font-size: 16px;
+    }
+    .card {
+      background-color: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 28px;
+      margin-bottom: 24px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    }
+    .card-title {
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--primary);
+    }
+    .contact-box {
+      background: rgba(59, 130, 246, 0.1);
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      border-radius: 12px;
+      padding: 20px;
+      text-align: center;
+      margin-top: 16px;
+    }
+    .email-link {
+      display: inline-block;
+      margin-top: 10px;
+      padding: 12px 28px;
+      background-color: var(--primary);
+      color: white;
+      text-decoration: none;
+      border-radius: 10px;
+      font-weight: 700;
+      font-size: 16px;
+      transition: background 0.2s;
+    }
+    .email-link:hover {
+      background-color: var(--primary-hover);
+    }
+    .faq-item {
+      margin-bottom: 20px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--border);
+    }
+    .faq-item:last-child {
+      margin-bottom: 0;
+      padding-bottom: 0;
+      border-bottom: none;
+    }
+    .faq-question {
+      font-weight: 700;
+      font-size: 17px;
+      margin-bottom: 6px;
+      color: #FFFFFF;
+    }
+    .faq-answer {
+      color: var(--text-muted);
+      font-size: 15px;
+    }
+    .links-nav {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      margin-top: 40px;
+      font-size: 14px;
+    }
+    .links-nav a {
+      color: var(--text-muted);
+      text-decoration: underline;
+    }
+    .links-nav a:hover {
+      color: var(--text-main);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="logo-badge">🇪🇺</div>
+      <h1>Schengen Rule Tracker</h1>
+      <p class="subtitle">Visa Stay Calculator & Travel Compliance Support</p>
+    </header>
+
+    <!-- DIRECT SUPPORT CONTACT -->
+    <div class="card">
+      <h2 class="card-title">📬 Official Customer Support & Inquiries</h2>
+      <p>Have questions, feature requests, or need assistance with your calculations? Our support team is available publicly without requiring any account registration.</p>
+      
+      <div class="contact-box">
+        <p><strong>Direct Developer Email:</strong></p>
+        <a href="mailto:ozanmoral@gmail.com?subject=Schengen%20Rule%20Tracker%20Support" class="email-link">ozanmoral@gmail.com</a>
+        <p style="margin-top: 10px; font-size: 13px; color: var(--text-muted);">Typical response time: Within 24 hours</p>
+      </div>
+    </div>
+
+    <!-- FAQ -->
+    <div class="card">
+      <h2 class="card-title">❓ Frequently Asked Questions (FAQ)</h2>
+      
+      <div class="faq-item">
+        <div class="faq-question">1. Do I need an account or login to use the app?</div>
+        <div class="faq-answer">No account or login is required. The app is completely accessible immediately upon download with zero registration barriers.</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-question">2. Where and how is my data saved?</div>
+        <div class="faq-answer">All trip entries, traveler profiles, and visa configurations are saved 100% locally on your device using native local storage (AsyncStorage). We do not operate external cloud database servers or track user data.</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-question">3. How do I back up my trip data?</div>
+        <div class="faq-answer">Because data is stored securely in your device's local app sandbox, it is automatically included in standard iOS device backups (via iCloud or Mac/Finder backup). Restoring an iOS backup will restore your full trip history.</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-question">4. How is the 90/180-day rolling window calculated?</div>
+        <div class="faq-answer">Calculations strictly follow official European Union Regulation (EU) 2016/399 (Schengen Borders Code). On any given date of your stay, the app looks back exactly 180 days and calculates the total cumulative days spent across all Schengen member states.</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-question">5. Can I track stays in countries outside Schengen?</div>
+        <div class="faq-answer">Yes! Use the zone selector bar at the top to add independent non-Schengen destinations (such as North Macedonia, Kosovo, Turkey, United Kingdom, etc.) to calculate single-country visa stay limits.</div>
+      </div>
+    </div>
+
+    <!-- PRIVACY SUMMARY -->
+    <div class="card">
+      <h2 class="card-title">🔒 Privacy & Data Commitment</h2>
+      <p style="color: var(--text-muted); font-size: 15px;">
+        "Schengen Rule Tracker" is built with a strict offline privacy-first architecture. The app does not collect personal identifiers, does not require camera or location permissions, and serves non-personalized ads only.
+      </p>
+    </div>
+
+    <div class="links-nav">
+      <a href="index.html">Home</a>
+      <a href="support.html">Support</a>
+      <a href="privacy.html">Privacy Policy</a>
+    </div>
+  </div>
+</body>
+</html>
