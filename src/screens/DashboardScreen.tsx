@@ -162,6 +162,7 @@ export const DashboardScreen = () => {
   const [isAddZoneModalOpen, setIsAddZoneModalOpen] = useState(false);
   const [selectedNewCountry, setSelectedNewCountry] = useState(NON_SCHENGEN_COUNTRIES[0]);
   const [calendarDate, setCalendarDate] = useState<string>(() => formatLocalISO(new Date()));
+  const [isDisclaimerModalOpen, setIsDisclaimerModalOpen] = useState(false);
 
   // Sync customZones with activePerson.zones or language default
   useEffect(() => {
@@ -1128,6 +1129,20 @@ export const DashboardScreen = () => {
               </View>
             </View>
 
+            {/* LEGAL DISCLAIMER & OFFICIAL SOURCES IN SIDE MENU */}
+            <View style={dynamicStyles.disclaimerSection}>
+              <TouchableOpacity
+                style={dynamicStyles.disclaimerBtn}
+                onPress={() => {
+                  setIsDisclaimerModalOpen(true);
+                }}
+              >
+                <Text style={dynamicStyles.disclaimerBtnText}>
+                  {t('dashboard.legalDisclaimer')} ➔
+                </Text>
+              </TouchableOpacity>
+            </View>
+
             {/* GITHUB REPO LINK IN SIDE MENU */}
             <View style={dynamicStyles.githubSection}>
               <TouchableOpacity
@@ -1151,6 +1166,75 @@ export const DashboardScreen = () => {
                 resizeMode="contain"
               />
             </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* LEGAL DISCLAIMER & OFFICIAL SOURCES MODAL */}
+      <Modal
+        visible={isDisclaimerModalOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setIsDisclaimerModalOpen(false)}
+      >
+        <View style={dynamicStyles.disclaimerModalOverlay}>
+          <View style={dynamicStyles.disclaimerModalContent}>
+            <Text style={dynamicStyles.disclaimerModalTitle}>
+              {t('dashboard.legalDisclaimer')}
+            </Text>
+
+            <ScrollView style={{ maxHeight: 340 }} showsVerticalScrollIndicator={false}>
+              <Text style={dynamicStyles.disclaimerModalBody}>
+                {t('dashboard.legalDisclaimerBody')}
+              </Text>
+
+              <Text style={[dynamicStyles.sectionHeader, { marginTop: 16, marginBottom: 8 }]}>
+                {t('dashboard.officialSources').toUpperCase()}
+              </Text>
+
+              <TouchableOpacity
+                style={dynamicStyles.sourceLinkBtn}
+                onPress={() => Linking.openURL('https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX%3A32016R0399')}
+              >
+                <Text style={dynamicStyles.sourceLinkText}>
+                  🇪🇺 EU Schengen Borders Code (2016/399) ↗
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={dynamicStyles.sourceLinkBtn}
+                onPress={() => Linking.openURL('https://home-affairs.ec.europa.eu/policies/schengen-borders-and-visa_en')}
+              >
+                <Text style={dynamicStyles.sourceLinkText}>
+                  🇪🇺 European Commission Migration & Visa ↗
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={dynamicStyles.sourceLinkBtn}
+                onPress={() => Linking.openURL('https://www.mfa.gov.tr')}
+              >
+                <Text style={dynamicStyles.sourceLinkText}>
+                  🇹🇷 Türkiye Dışişleri Bakanlığı ↗
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={dynamicStyles.sourceLinkBtn}
+                onPress={() => Linking.openURL('https://daimonyazilim.com/schengen-support')}
+              >
+                <Text style={dynamicStyles.sourceLinkText}>
+                  🛡️ Daimon Destek & Gizlilik Sayfası ↗
+                </Text>
+              </TouchableOpacity>
+            </ScrollView>
+
+            <TouchableOpacity
+              style={dynamicStyles.closeDisclaimerBtn}
+              onPress={() => setIsDisclaimerModalOpen(false)}
+            >
+              <Text style={dynamicStyles.closeDisclaimerBtnText}>{t('common.cancel', { defaultValue: 'Kapat' })}</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>
@@ -1476,4 +1560,17 @@ const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
     width: 120,
     height: 36,
   },
+  // Disclaimer Section & Modal
+  disclaimerSection: { marginTop: 14 },
+  disclaimerBtn: { backgroundColor: colors.surface, padding: 12, borderRadius: 10, borderWidth: 1, borderColor: colors.border, alignItems: 'center' },
+  disclaimerBtnText: { fontSize: 13, fontWeight: '700', color: colors.bauhausBlue },
+
+  disclaimerModalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.65)', justifyContent: 'center', alignItems: 'center', padding: 20 },
+  disclaimerModalContent: { width: '100%', maxWidth: 420, backgroundColor: colors.surface, borderRadius: 16, padding: 20, borderWidth: 1, borderColor: colors.border },
+  disclaimerModalTitle: { fontSize: 17, fontWeight: '800', color: colors.text, marginBottom: 12, textAlign: 'center' },
+  disclaimerModalBody: { fontSize: 14, color: colors.textSecondary, lineHeight: 20 },
+  sourceLinkBtn: { backgroundColor: colors.background, padding: 10, borderRadius: 8, marginBottom: 8, borderWidth: 1, borderColor: colors.border },
+  sourceLinkText: { fontSize: 13, color: colors.bauhausBlue, fontWeight: '600' },
+  closeDisclaimerBtn: { marginTop: 16, backgroundColor: colors.bauhausBlue, padding: 12, borderRadius: 10, alignItems: 'center' },
+  closeDisclaimerBtnText: { color: colors.white, fontWeight: '700', fontSize: 15 },
 });

@@ -70,7 +70,10 @@
     "futurePlanOverstay": "⚠️ {{overstay}} Gün İhlal Oluşuyor! Dönüşü erkene çekin",
     "futurePlanExpired": "⚠️ Vize Bitişinden Sonra! (Vize Geçersiz)",
     "notificationFutureOverstayTitle": "⚠️ Gelecek Seyahat İhlal Uyarısı!",
-    "notificationFutureOverstayBody": "{{country}} seyahatiniz 90 günlük sınırı {{overstay}} gün aşıyor. Biletinizi erkene çekmeniz önerilir."
+    "notificationFutureOverstayBody": "{{country}} seyahatiniz 90 günlük sınırı {{overstay}} gün aşıyor. Biletinizi erkene çekmeniz önerilir.",
+    "legalDisclaimer": "⚖️ Yasal Uyarı & Resmi Kaynaklar",
+    "legalDisclaimerBody": "Schengen Takip, Daimon Yazılım tarafından geliştirilmiş bağımsız bir hesaplama aracıdır. Herhangi bir devlet kuruluşunu, konsolosluğu veya Avrupa Birliği'ni TEMSİL ETMEZ. Hesaplamalar resmi AB 2016/399 yönetmeliğine dayanmaktadır.",
+    "officialSources": "Resmi Bilgi Kaynakları:"
   },
   "addTrip": {
     "ongoing": "Devam Eden Seyahat",

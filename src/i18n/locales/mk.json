@@ -69,7 +69,10 @@
     "futurePlanOverstay": "⚠️ Пречекорување со {{overstay}} дена! Променете го враќањето",
     "futurePlanExpired": "⚠️ По истекот на визата! (Неважечка)",
     "notificationFutureOverstayTitle": "⚠️ Предупредување за пречекорување на визата!",
-    "notificationFutureOverstayBody": "Вашето патување во {{country}} ќе го надмине лимитот од 90 дена за {{overstay}} дена."
+    "notificationFutureOverstayBody": "Вашето патување во {{country}} ќе го надмине лимитот од 90 дена за {{overstay}} дена.",
+    "legalDisclaimer": "⚖️ Правно известување и извори",
+    "legalDisclaimerBody": "Visa Rule Tracker е независна алатка развиена од Daimon Yazılım. НЕ претставува државна институција или Европската Унија. Пресметките се засноваат на Регулатива (ЕУ) 2016/399.",
+    "officialSources": "Официјални извори на информации:"
   },
   "addTrip": {
     "ongoing": "Tekocho Patuvanje",

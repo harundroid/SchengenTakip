@@ -69,7 +69,10 @@
     "futurePlanOverstay": "⚠️ Υπέρβαση κατά {{overstay}} μέρες! Αλλάξτε την επιστροφή",
     "futurePlanExpired": "⚠️ Μετά τη λήξη της βίζας! (Άκυρη)",
     "notificationFutureOverstayTitle": "⚠️ Προειδοποίηση υπέρβασης βίζας!",
-    "notificationFutureOverstayBody": "Το ταξίδι σας στο {{country}} θα υπερβεί το όριο των 90 ημερών κατά {{overstay}} μέρες."
+    "notificationFutureOverstayBody": "Το ταξίδι σας στο {{country}} θα υπερβεί το όριο των 90 ημερών κατά {{overstay}} μέρες.",
+    "legalDisclaimer": "⚖️ Νομική Αποποίηση & Επίσημες Πηγές",
+    "legalDisclaimerBody": "Το Visa Rule Tracker είναι ένα ανεξάρτητο εργαλείο που αναπτύχθηκε από την Daimon Software. ΔΕΝ εκπροσωπεί καμία κρατική αρχή ή την Ευρωπαϊκή Ένωση. Οι υπολογισμοί βασίζονται στον Κανονισμό (ΕΕ) 2016/399.",
+    "officialSources": "Επίσημες Πηγές Πληροφοριών:"
   },
   "addTrip": {
     "ongoing": "Τρέχον Ταξίδι",

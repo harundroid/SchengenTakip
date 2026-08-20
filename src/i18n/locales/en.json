@@ -70,7 +70,10 @@
     "futurePlanOverstay": "⚠️ Overstay by {{overstay}} days! Adjust return date",
     "futurePlanExpired": "⚠️ After Visa Expiration! (Invalid Visa)",
     "notificationFutureOverstayTitle": "⚠️ Upcoming Trip Visa Overstay Alert!",
-    "notificationFutureOverstayBody": "Your trip to {{country}} will exceed the 90-day limit by {{overstay}} days. Consider adjusting your return date."
+    "notificationFutureOverstayBody": "Your trip to {{country}} will exceed the 90-day limit by {{overstay}} days. Consider adjusting your return date.",
+    "legalDisclaimer": "⚖️ Legal Disclaimer & Official Sources",
+    "legalDisclaimerBody": "Visa Rule Tracker is an independent utility tool developed by Daimon Software. It is NOT affiliated with, endorsed by, or representing any government entity or the European Union. Stay calculations are based on official EU Regulation 2016/399.",
+    "officialSources": "Official Government Information Sources:"
   },
   "addTrip": {
     "ongoing": "Ongoing Trip",

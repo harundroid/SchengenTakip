@@ -70,7 +70,10 @@
     "futurePlanOverstay": "⚠️ Превишаване с {{overstay}} дни! Променете връщането",
     "futurePlanExpired": "⚠️ След изтичане на визата! (Невалидна)",
     "notificationFutureOverstayTitle": "⚠️ Предупреждение за превишаване на визата!",
-    "notificationFutureOverstayBody": "Пътуването ви до {{country}} ще надвиши лимита от 90 дни с {{overstay}} дни."
+    "notificationFutureOverstayBody": "Пътуването ви до {{country}} ще надвиши лимита от 90 дни с {{overstay}} дни.",
+    "legalDisclaimer": "⚖️ Правно уведомление и източници",
+    "legalDisclaimerBody": "Visa Rule Tracker е независим инструмент, разработен от Daimon Yazılım. НЕ представлява държавна институция или Европейския съюз. Изчисленията се основават на Регламент (ЕС) 2016/399.",
+    "officialSources": "Официални източници на информация:"
   },
   "addTrip": {
     "ongoing": "Текущо Пътуване",
