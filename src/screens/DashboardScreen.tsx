@@ -470,11 +470,18 @@ export const DashboardScreen = () => {
 
         const entryC = (trip.entryCountry || '').trim();
         const exitC = (trip.exitCountry || '').trim();
+        const visaC = (activeVisaConfig.country || '').trim();
 
         const isOngoing = trip.isOngoing;
+        const isDifferentFromVisaCountry = currentZone.trackingMode === 'SCHENGEN' && 
+          !activeVisaConfig.isVisaExempt && 
+          Boolean(visaC) && 
+          (!isSameCountry(entryC, visaC) || !isSameCountry(exitC, visaC));
+
         const isMulti = !trip.isOngoing && (
           (trip.segments && trip.segments.length > 1) || 
-          (Boolean(entryC) && Boolean(exitC) && entryC !== exitC)
+          (Boolean(entryC) && Boolean(exitC) && !isSameCountry(entryC, exitC)) ||
+          isDifferentFromVisaCountry
         );
 
         dateList.forEach((dateStr, idx) => {
