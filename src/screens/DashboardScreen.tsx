@@ -13,7 +13,7 @@ import { scheduleVisaExpiringNotification } from '../utils/notifications';
 import { useTranslation } from 'react-i18next';
 import { changeAppLanguage } from '../i18n';
 import { showCompletedFlowInterstitial } from '../config/ads';
-import { ALL_COUNTRIES, SCHENGEN_ONLY_COUNTRIES, NON_SCHENGEN_COUNTRIES, isSchengenCountry, isSameCountry, getCountryCode } from '../constants/countries';
+import { ALL_COUNTRIES, SCHENGEN_ONLY_COUNTRIES, NON_SCHENGEN_COUNTRIES, isSchengenCountry, isSameCountry, getCountryCode, getSortedCountryOptions } from '../constants/countries';
 import { Picker } from '@react-native-picker/picker';
 import { useAppTheme } from '../theme/ThemeContext';
 import { TrackingMode } from '../types';
@@ -163,6 +163,11 @@ export const DashboardScreen = () => {
   const [selectedNewCountry, setSelectedNewCountry] = useState(NON_SCHENGEN_COUNTRIES[0]);
   const [calendarDate, setCalendarDate] = useState<string>(() => formatLocalISO(new Date()));
   const [isDisclaimerModalOpen, setIsDisclaimerModalOpen] = useState(false);
+
+  // Alphabetically sorted non-schengen country list by localized label
+  const sortedNonSchengenCountries = useMemo(() => {
+    return getSortedCountryOptions(NON_SCHENGEN_COUNTRIES, t, i18n.language);
+  }, [t, i18n.language]);
 
   // Sync customZones with activePerson.zones or language default
   useEffect(() => {
@@ -581,8 +586,8 @@ export const DashboardScreen = () => {
                 itemStyle={{ fontSize: 18, color: colors.text, height: 120 }}
               >
                 <Picker.Item label="🇪🇺 Schengen Zone" value="schengen" color={colors.text} />
-                {NON_SCHENGEN_COUNTRIES.map(c => (
-                  <Picker.Item key={c} label={t(`countries.${c}`, { defaultValue: c })} value={c} color={colors.text} />
+                {sortedNonSchengenCountries.map(c => (
+                  <Picker.Item key={c.code} label={c.label} value={c.code} color={colors.text} />
                 ))}
               </Picker>
             </View>

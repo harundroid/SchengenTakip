@@ -13,7 +13,7 @@ import { showCompletedFlowInterstitial } from '../config/ads';
 import { AdBanner } from '../components/AdBanner';
 import { useAppTheme } from '../theme/ThemeContext';
 import { validateTripForm } from '../utils/validation';
-import { SCHENGEN_ONLY_COUNTRIES, getCountryCode, isSchengenCountry } from '../constants/countries';
+import { SCHENGEN_ONLY_COUNTRIES, getCountryCode, isSchengenCountry, getSortedCountryOptions } from '../constants/countries';
 
 const safeParseDate = (d?: string | Date | null): Date => {
   if (!d) return new Date();
@@ -54,6 +54,11 @@ export const AddTripScreen = () => {
   const activePerson = persons.find(p => p.id === activePersonId);
   const existingTripId = route.params?.tripId;
   const existingTrip = activePerson?.trips.find(t => t.id === existingTripId);
+
+  // Alphabetically sorted country list by localized name in active language
+  const sortedSchengenCountries = useMemo(() => {
+    return getSortedCountryOptions(SCHENGEN_ONLY_COUNTRIES, t, i18n.language);
+  }, [t, i18n.language]);
 
   // 1. Gather all available tracking zones / visas for active person
   const availableZones = useMemo(() => {
@@ -193,7 +198,18 @@ export const AddTripScreen = () => {
 
   const onEntryChange = (event: any, selectedDate?: Date) => {
     setShowEntryPicker(false);
-    if (selectedDate && !isNaN(selectedDate.getTime())) setEntryDate(selectedDate);
+    if (event.type === 'set' && selectedDate && !isNaN(selectedDate.getTime())) {
+      setEntryDate(selectedDate);
+      if (exitDate < selectedDate) {
+        setExitDate(selectedDate);
+      }
+      if (!isOngoing) {
+        // Seamlessly open the exit date picker right after entry date is confirmed
+        setTimeout(() => {
+          setShowExitPicker(true);
+        }, 150);
+      }
+    }
   };
 
   const onExitChange = (event: any, selectedDate?: Date) => {
@@ -333,7 +349,12 @@ export const AddTripScreen = () => {
                     display="compact"
                     locale={i18n.language === 'tr' ? 'tr-TR' : i18n.language === 'bg' ? 'bg-BG' : i18n.language === 'el' ? 'el-GR' : i18n.language === 'mk' ? 'mk-MK' : 'en-US'}
                     onChange={(event, selectedDate) => {
-                      if (selectedDate) setEntryDate(selectedDate);
+                      if (selectedDate) {
+                        setEntryDate(selectedDate);
+                        if (exitDate < selectedDate) {
+                          setExitDate(selectedDate);
+                        }
+                      }
                     }}
                     themeVariant={isDark ? 'dark' : 'light'}
                     textColor={colors.text}
@@ -423,7 +444,7 @@ export const AddTripScreen = () => {
             </View>
           ) : (
             <>
-              {/* Schengen Member Countries Pickers Only */}
+              {/* Schengen Member Countries Pickers Only (Alphabetically Sorted by Label) */}
               <View style={dynamicStyles.inputContainer}>
                 <Text style={dynamicStyles.label}>{t('addTrip.entryCountry')} (Schengen)</Text>
                 <View style={dynamicStyles.pickerContainer}>
@@ -432,8 +453,8 @@ export const AddTripScreen = () => {
                     onValueChange={(itemValue) => setEntryCountry(itemValue)}
                     itemStyle={dynamicStyles.pickerItem}
                   >
-                    {SCHENGEN_ONLY_COUNTRIES.map((code) => (
-                      <Picker.Item key={code} label={t(`countries.${code}`, { defaultValue: code })} value={code} color={colors.text} />
+                    {sortedSchengenCountries.map((c) => (
+                      <Picker.Item key={c.code} label={c.label} value={c.code} color={colors.text} />
                     ))}
                   </Picker>
                 </View>
@@ -448,8 +469,8 @@ export const AddTripScreen = () => {
                       onValueChange={(itemValue) => setExitCountry(itemValue)}
                       itemStyle={dynamicStyles.pickerItem}
                     >
-                      {SCHENGEN_ONLY_COUNTRIES.map((code) => (
-                        <Picker.Item key={code} label={t(`countries.${code}`, { defaultValue: code })} value={code} color={colors.text} />
+                      {sortedSchengenCountries.map((c) => (
+                        <Picker.Item key={c.code} label={c.label} value={c.code} color={colors.text} />
                       ))}
                     </Picker>
                   </View>

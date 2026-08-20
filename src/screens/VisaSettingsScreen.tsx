@@ -7,7 +7,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { parseISO } from 'date-fns';
 import { useTripStore } from '../store/useTripStore';
 import { useTranslation } from 'react-i18next';
-import { ALL_COUNTRIES, SCHENGEN_ONLY_COUNTRIES, NON_SCHENGEN_COUNTRIES, getCountryCode, isSchengenCountry } from '../constants/countries';
+import { ALL_COUNTRIES, SCHENGEN_ONLY_COUNTRIES, NON_SCHENGEN_COUNTRIES, getCountryCode, isSchengenCountry, getSortedCountryOptions } from '../constants/countries';
 import { TrackingMode, VisaDetails, VisaZoneConfig } from '../types';
 import { AdBanner } from '../components/AdBanner';
 import { useAppTheme } from '../theme/ThemeContext';
@@ -84,6 +84,15 @@ export const VisaSettingsScreen = () => {
 
     return list;
   }, [activePerson, t]);
+
+  // Alphabetically sorted country lists by active language label
+  const sortedSchengenCountries = useMemo(() => {
+    return getSortedCountryOptions(SCHENGEN_ONLY_COUNTRIES, t, i18n.language);
+  }, [t, i18n.language]);
+
+  const sortedNonSchengenCountries = useMemo(() => {
+    return getSortedCountryOptions(NON_SCHENGEN_COUNTRIES, t, i18n.language);
+  }, [t, i18n.language]);
 
   const [selectedZoneId, setSelectedZoneId] = useState<string>(initialZoneId);
   const [selectedNewCountryZone, setSelectedNewCountryZone] = useState<string>(NON_SCHENGEN_COUNTRIES[0]);
@@ -328,8 +337,8 @@ export const VisaSettingsScreen = () => {
                   itemStyle={dynamicStyles.pickerItem}
                 >
                   <Picker.Item label="🇪🇺 Schengen Zone" value="schengen" color={colors.text} />
-                  {NON_SCHENGEN_COUNTRIES.map(c => (
-                    <Picker.Item key={c} label={t(`countries.${c}`, { defaultValue: c })} value={c} color={colors.text} />
+                  {sortedNonSchengenCountries.map(c => (
+                    <Picker.Item key={c.code} label={c.label} value={c.code} color={colors.text} />
                   ))}
                 </Picker>
               </View>
@@ -349,8 +358,8 @@ export const VisaSettingsScreen = () => {
                   onValueChange={(itemValue) => setCountry(itemValue)}
                   itemStyle={dynamicStyles.pickerItem}
                 >
-                  {SCHENGEN_ONLY_COUNTRIES.map((c) => (
-                    <Picker.Item key={c} label={t(`countries.${c}`, { defaultValue: c })} value={c} color={colors.text} />
+                  {sortedSchengenCountries.map((c) => (
+                    <Picker.Item key={c.code} label={c.label} value={c.code} color={colors.text} />
                   ))}
                 </Picker>
               </View>

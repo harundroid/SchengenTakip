@@ -112,3 +112,20 @@ export const isSameCountry = (a?: string, b?: string): boolean => {
   const codeB = getCountryCode(b);
   return codeA === codeB;
 };
+
+/**
+ * Returns a sorted array of country objects { code, label } 
+ * alphabetically sorted by the displayed label (LabelMember) in the active language.
+ */
+export const getSortedCountryOptions = (
+  countryCodes: string[],
+  t: (key: string, options?: any) => string,
+  currentLanguage: string = 'en'
+): Array<{ code: string; label: string }> => {
+  return countryCodes
+    .map(code => ({
+      code,
+      label: t(`countries.${code}`, { defaultValue: code }),
+    }))
+    .sort((a, b) => a.label.localeCompare(b.label, currentLanguage, { sensitivity: 'base' }));
+};
